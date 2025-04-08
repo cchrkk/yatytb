@@ -111,7 +111,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ytdlp_cmd = [
             "yt-dlp",
             "--cookies", COOKIES_PATH,
-            "--print", "description",  # Aggiungi questa opzione per ottenere la descrizione
             "-o", output_template,
             url
         ]
@@ -147,8 +146,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     media_group = []
     caption = f"@{update.message.from_user.username or 'utente'} | "
     caption += f"[🔗LINK]({url})"
-    if description:
-        caption += f"📖 {description}\n"  # Aggiungi la descrizione al messaggio
 
     # Gestisci le immagini separatamente dai video
     for filepath in downloaded_files[:5]:
