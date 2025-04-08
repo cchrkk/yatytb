@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  tg-downloader:
+    build: .
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_IDS=${ALLOWED_IDS}
+      - DOWNLOAD_DIR=${DOWNLOAD_DIR}
+
+    volumes:
+      - ./downloads:/app/downloads
