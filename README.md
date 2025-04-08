@@ -49,8 +49,8 @@ If the link is an Instagram post with multiple images, the bot will send all ima
 
 ![image](https://github.com/user-attachments/assets/b11edc73-09d5-49de-86fe-79b7e98f1efc)
 
-##Contributing
+## Contributing
 If you want to contribute to this project, feel free to fork the repository and send a pull request with improvements or bug fixes.
 
-##License
+## License
 This project is licensed under the MIT License - see the LICENSE file for details.
