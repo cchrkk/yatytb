@@ -1,9 +1,10 @@
 version: "3.8"
 services:
   yatytb:
+    container_name: yatytb
     image: ghcr.io/cchrkk/yatytb:latest
     environment:
-      - BOT_TOKEN=${BOT_TOKEN} # bot token from BotFather
-      - ALLOWED_IDS=${ALLOWED_IDS} # Set allowed IDs separated by comma
+      - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
+      - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt  # OPTIONAL: Only set if cookies needed
