@@ -144,7 +144,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Inizializza lista per le immagini da inviare
     media_group = []
-    caption = f"@{update.message.from_user.username or 'utente'} | "
+    caption = f"@{update.message.from_user.username or 'utente'} \n"
     caption += f"[🔗LINK]({url})"
 
     # Gestisci le immagini separatamente dai video
