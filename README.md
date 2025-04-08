@@ -1,12 +1,12 @@
 
 # Yet Another yt-dlp Telegram Bot 🎥📥
 
-This project is a Telegram bot that allows you to download videos and audio using `yt-dlp` or `gallery-dl` directly on Telegram. You can send links of videos and posts from platforms like YouTube and Instagram, and the bot will send you the files as media. The bot also supports images from Instagram, which are sent as a media group with a single caption. 📲✨
+This project is a Telegram bot that allows you to download videos and audio using [yt-dlp](https://github.com/yt-dlp/yt-dlp) or [gallery-dl](https://github.com/mikf/gallery-dl) directly on Telegram. You can send links of videos and posts from platforms like YouTube and Instagram, and the bot will send you the files as media. The bot also supports images from Instagram, which are sent as a media group with a single caption. 📲✨
 
 ## Features 🌟
 
-- Downloads videos and audio using the fabulous `[yt-dlp](https://github.com/yt-dlp/yt-dlp)`. 🎧🎬
-- Handles Instagram posts using `[gallery-dl](https://github.com/mikf/gallery-dl)`. 📸📲
+- Downloads videos and audio using the fabulous [yt-dlp](https://github.com/yt-dlp/yt-dlp). 🎧🎬
+- Handles Instagram posts using [gallery-dl](https://github.com/mikf/gallery-dl). 📸📲
 - Supports sending video and image files on Telegram. 💬📹
 - Allows customization of allowed user IDs via Docker environment variables. 🔒
 
