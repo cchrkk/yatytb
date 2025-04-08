@@ -5,8 +5,8 @@ This project is a Telegram bot that allows you to download videos and audio usin
 
 ## Features 🌟
 
-- Downloads videos and audio using `yt-dlp`. 🎧🎬
-- Handles Instagram posts using `gallery-dl`. 📸📲
+- Downloads videos and audio using the fabulous `[yt-dlp](https://github.com/yt-dlp/yt-dlp)`. 🎧🎬
+- Handles Instagram posts using `[gallery-dl](https://github.com/mikf/gallery-dl)`. 📸📲
 - Supports sending video and image files on Telegram. 💬📹
 - Allows customization of allowed user IDs via Docker environment variables. 🔒
 
