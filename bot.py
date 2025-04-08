@@ -78,7 +78,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_audio = "audio" in text.lower()
 
     print(f"URL ricevuto: {url}")
-
+    description = ""
     downloaded_files = []
 
     # Se è un post Instagram (non reel), usa gallery-dl
