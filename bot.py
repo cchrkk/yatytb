@@ -140,7 +140,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     if not downloaded_files:
-        await update.message.reply_text("Download fallito o nessun file trovato.")
         return
 
     # Inizializza lista per le immagini da inviare
