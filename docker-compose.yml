@@ -1,11 +1,9 @@
 version: "3.8"
 services:
-  tg-downloader:
-    build: .
+  yatytb:
+    image: ghcr.io/cchrkk/yatytb:latest
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - ALLOWED_IDS=${ALLOWED_IDS}
-      - DOWNLOAD_DIR=${DOWNLOAD_DIR}
-
+      - BOT_TOKEN=${BOT_TOKEN} # bot token from BotFather
+      - ALLOWED_IDS=${ALLOWED_IDS} # Set allowed IDs separated by comma
     volumes:
-      - ./downloads:/app/downloads
+      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
