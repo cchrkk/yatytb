@@ -6,8 +6,8 @@ RUN apt update && apt install -y ffmpeg && \
 
 WORKDIR /app
 COPY bot.py .
-COPY cookies.txt /app/cookies/cookies.txt
-
+#COPY cookies.txt /app/cookies/cookies.txt
+ENV ALLOWED_IDS=changeme
 ENV BOT_TOKEN=changeme
 VOLUME ["/app/downloads"]
 
