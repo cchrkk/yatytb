@@ -21,13 +21,14 @@ This project is a Telegram bot that allows you to download videos and audio usin
 ```yaml
 version: "3.8"
 services:
-  tg-downloader:
-    image: ghcr.io/cchrkk/yatytb:latest  # Usa l'immagine dal GitHub Container Registry
+  yatytb:
+    container_name: yatytb
+    image: ghcr.io/cchrkk/yatytb:latest
     environment:
-      - BOT_TOKEN=YOUR_BOT_TOKEN # Required
-      - ALLOWED_IDS=YOUR_ALLOWED_CHAT_OR_GROUP_IDS # Required, comma-separated
+      - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
+      - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
     volumes:
-      - /root/cookies.txt:/app/cookies/cookies.txt  # Optional
+      - ./cookies.txt:/app/cookies/cookies.txt  # OPTIONAL: Only set if cookies needed
 ```
 
 ## Environment Variables 🔑
