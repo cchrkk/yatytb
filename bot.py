@@ -146,7 +146,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Inizializza lista per le immagini da inviare
     media_group = []
     caption = f"@{update.message.from_user.username or 'utente'} | "
-    caption += f"[Link originale]({url})"
+    caption += f"[🔗LINK]({url})"
 
     # Gestisci le immagini separatamente dai video
     for filepath in downloaded_files[:5]:
@@ -155,7 +155,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             size_human = humanize.naturalsize(size_bytes)
             duration = get_duration_from_file(filepath)
 
-            caption_media = caption + f" | Durata: {duration} | Peso: {size_human}\n"
+            caption_media = caption + f" | 🕒 {duration} | 💾 {size_human}\n"
 
             # Controlla se il file è immagine o video tramite estensione
             file_extension = os.path.splitext(filepath)[1].lower()
