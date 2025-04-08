@@ -4,19 +4,10 @@ FROM python:3.11-alpine
 # Installa ffmpeg e le dipendenze necessarie per ffmpeg
 RUN apk update && apk add --no-cache \
     ffmpeg \
-    bash \
-    libmagic \
     && rm -rf /var/cache/apk/*
-
+COPY requirements.txt .
 # Installa le dipendenze Python
-RUN pip install --no-cache-dir \
-    moviepy \
-    python-telegram-bot \
-    yt-dlp \
-    aiofiles \
-    humanize \
-    gallery-dl
-
+RUN pip install -r requirements.txt
 # Crea le directory per i download e i cookies
 RUN mkdir -p /app/downloads /app/cookies
 
