@@ -1,14 +1,37 @@
-FROM python:3.11-slim
+# Usa Python 3.11 su Alpine come immagine base
+FROM python:3.11-alpine
 
-RUN apt update && apt install -y ffmpeg && \
-    pip install moviepy python-telegram-bot yt-dlp aiofiles humanize gallery-dl && \
-    mkdir -p /app/downloads /app/cookies
+# Installa ffmpeg e le dipendenze necessarie per ffmpeg
+RUN apk update && apk add --no-cache \
+    ffmpeg \
+    bash \
+    libmagic \
+    && rm -rf /var/cache/apk/*
 
+# Installa le dipendenze Python
+RUN pip install --no-cache-dir \
+    moviepy \
+    python-telegram-bot \
+    yt-dlp \
+    aiofiles \
+    humanize \
+    gallery-dl
+
+# Crea le directory per i download e i cookies
+RUN mkdir -p /app/downloads /app/cookies
+
+# Imposta la cartella di lavoro
 WORKDIR /app
+
+# Copia il bot nel container
 COPY bot.py .
-#COPY cookies.txt /app/cookies/cookies.txt
+
+# Imposta le variabili d'ambiente (modifica i valori in base alle tue esigenze)
 ENV ALLOWED_IDS=changeme
 ENV BOT_TOKEN=changeme
+
+# Crea un volume per i download
 VOLUME ["/app/downloads"]
 
+# Avvia il bot
 CMD ["python", "bot.py"]
