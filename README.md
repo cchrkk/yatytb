@@ -34,7 +34,7 @@ services:
 ## Environment Variables 🔑
 - **BOT_TOKEN**: Your Telegram bot token (required for authentication). 🆔
   Ask it here [@BotFather](https://t.me/BotFather)
-- **ALLOWED_IDS**: A comma-separated list of user IDs authorized to interact with the bot. 👥
+- **ALLOWED_IDS**: A comma-separated list of user IDs authorized to interact with the bot. 🔗Ask yours here [@getmyid_bot](https://t.me/getmyid_bot)
 
 ## Create your cookies.txt file 🍪
 1. Log in to Instagram/Tiktok/Youtube in your browser. 🌍
@@ -46,8 +46,21 @@ services:
 1. Send a video or post link (YouTube, Instagram) to the bot. 📨
 2. The bot downloads the content and sends you the files. ⬇️
 3. If the link is an Instagram post with multiple images, the bot will send all images in a single message as a media group. 📸🎨
+   
+# Demo Pics 🤳
 
-![image](https://github.com/user-attachments/assets/b11edc73-09d5-49de-86fe-79b7e98f1efc)
+![image](https://github.com/user-attachments/assets/062420f5-919e-43b5-80dc-d0cc6db04373)
+
+- Instagram Reel - handled by yt-dlp
+
+ 
+![image](https://github.com/user-attachments/assets/2b7467a7-f201-4123-8941-e36c59fd8052)
+
+- Instagram Photos Post - handled by gallery-dl
+
+![image](https://github.com/user-attachments/assets/43697ddc-04a6-4b72-9c9f-7bd0c72f0936)
+
+- Tiktok Video - handled by yt-dlp
 
 ## Contributing 💡
 If you want to contribute to this project, feel free to fork the repository and send a pull request with improvements or bug fixes. 🛠️
