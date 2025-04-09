@@ -1,8 +1,13 @@
 # Usa Python 3.11 su Alpine come immagine base
 FROM python:3.11-alpine
-COPY requirements.txt .
 
+# Installa gli strumenti di build
+RUN apk add --no-cache build-base ffmpeg-dev
+
+# Assicurati che 'wheel' sia installato
+RUN pip install --upgrade pip wheel
 # Installa le dipendenze Python
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Crea le directory per i download e i cookies
