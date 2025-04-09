@@ -2,13 +2,13 @@
 FROM python:3.11-alpine
 
 # Installa gli strumenti di build 
-RUN apk update && apk add --no-cache \
-    ffmpeg \
-    curl \
-    ca-certificates \
-    libmagic \
-    ffmpeg \
-    && rm -rf /var/cache/apk/*
+# RUN apk update && apk add --no-cache \
+#    ffmpeg \
+#    curl \
+#    ca-certificates \
+#    libmagic \
+#    ffmpeg \
+#    && rm -rf /var/cache/apk/*
 
 # Copia il file requirements.txt
 COPY requirements.txt .
