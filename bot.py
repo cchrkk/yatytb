@@ -9,7 +9,7 @@ import shutil
 import humanize
 from moviepy import VideoFileClip
 
-# Variabili d'ambiente 
+# Variabili d'ambiente  
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
 COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.txt")
