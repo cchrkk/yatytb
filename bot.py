@@ -7,6 +7,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filte
 import logging
 import shutil
 import humanize
+import subprocess
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -36,7 +37,12 @@ for logger_name in ["telegram", "httpx", "asyncio"]:
 
 def calculate_duration(filepath):
     """Calcola la durata di un video usando ffprobe."""
+    if not os.path.isfile(filepath):
+        logging.error(f"File non trovato: {filepath}")
+        return "Durata sconosciuta"
+
     try:
+        logging.info(f"Esecuzione di ffprobe per il file: {filepath}")
         cmd = [
             "ffprobe",
             "-v", "error",
