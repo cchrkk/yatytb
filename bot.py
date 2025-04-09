@@ -8,6 +8,7 @@ import logging
 import shutil
 import humanize
 import subprocess
+import json
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -35,32 +36,77 @@ logging.basicConfig(
 for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
-def calculate_duration(filepath):
-    """Calcola la durata di un video usando ffprobe."""
-    if not os.path.isfile(filepath):
-        logging.error(f"File non trovato: {filepath}")
-        return "Durata sconosciuta"
+# def calculate_duration(filepath):
+    # """Calcola la durata di un video usando ffprobe."""
+    # if not os.path.isfile(filepath):
+        # logging.error(f"File non trovato: {filepath}")
+        # return "Durata sconosciuta"
 
+    # try:
+        # logging.info(f"Esecuzione di ffprobe per il file: {filepath}")
+        # cmd = [
+            # "ffprobe",
+            # "-v", "error",
+            # "-show_entries", "format=duration",
+            # "-of", "default=noprint_wrappers=1:nokey=1",
+            # filepath
+        # ]
+        # result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # if result.returncode != 0:
+            # raise Exception(f"Errore durante l'esecuzione di ffprobe: {result.stderr.strip()}")
+
+        # duration = float(result.stdout.strip())
+        # minutes, seconds = divmod(int(duration), 60)
+        # hours, minutes = divmod(minutes, 60)
+        # return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
+    # except Exception as e:
+        # logging.error(f"Errore nel calcolo della durata con ffprobe: {e}")
+        # return "Durata sconosciuta"
+
+def get_video_details(url, cookies_path):
+    """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
     try:
-        logging.info(f"Esecuzione di ffprobe per il file: {filepath}")
-        cmd = [
-            "ffprobe",
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            filepath
-        ]
+        cmd = ["yt-dlp", "-J", "--cookies", cookies_path, url]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
         if result.returncode != 0:
-            raise Exception(f"Errore durante l'esecuzione di ffprobe: {result.stderr.strip()}")
+            raise Exception(f"Errore durante l'esecuzione di yt-dlp: {result.stderr.strip()}")
+        
+        data = json.loads(result.stdout)
+        description = data.get("description", "Descrizione non disponibile")
+        duration_seconds = int(data.get("duration", 0))
+        duration_formatted = format_duration(duration_seconds)
+        uploader = data.get("uploader", "Uploader sconosciuto")
+        uploader_url = data.get("uploader_url", "")
+        extractor = data.get("extractor", "Extractor sconosciuto")
+        like_count = data.get("like_count", 0)
+        like_count_formatted = format_like_count(like_count)
 
-        duration = float(result.stdout.strip())
-        minutes, seconds = divmod(int(duration), 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
+        return description, duration_formatted, uploader, uploader_url, extractor, like_count_formatted
     except Exception as e:
-        logging.error(f"Errore nel calcolo della durata con ffprobe: {e}")
-        return "Durata sconosciuta"
+        logging.error(f"Errore nel recupero dei dettagli video: {e}")
+        return "Descrizione non disponibile", "Durata sconosciuta", "Uploader sconosciuto", "", "Extractor sconosciuto", "N/D"
+def format_duration(seconds):
+    """Converte i secondi in formato minuti:secondi."""
+    try:
+        seconds = int(seconds)
+        minutes, seconds = divmod(seconds, 60)
+        return f"{minutes}:{seconds:02}"
+    except ValueError:
+        return "Durata non valida"
+        
+def format_like_count(number):
+    """Converte i numeri grandi in formato abbreviato con suffissi."""
+    try:
+        number = int(number)
+        if number >= 1_000_000:
+            return f"{number // 1_000_000}M"  # Milioni
+        elif number >= 1_000:
+            return f"{number // 1_000}k"  # Migliaia
+        else:
+            return str(number)  # Numeri piccoli senza suffisso
+    except ValueError:
+        return "N/D"  # Valore di default in caso di errore
 
 async def download_content(url, is_audio):
     """Gestisce il download del contenuto usando yt-dlp o gallery-dl."""
@@ -101,9 +147,11 @@ async def download_content(url, is_audio):
             ytdlp_cmd = [
                 "yt-dlp",
                 "--cookies", COOKIES_PATH,
+                "--merge-output-format", "mp4",  # Separato correttamente
                 "-o", output_template,
                 url
             ]
+
             if is_audio:
                 ytdlp_cmd += ["-x", "--audio-format", "mp3"]
 
@@ -136,11 +184,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     chat_id = update.message.chat.id
 
-    # Aggiungi reazione iniziale 👍
-    try:
-        await context.bot.set_message_reaction(chat_id, update.message.message_id, "👍")
-    except Exception as e:
-        logging.error(f"Errore durante l'aggiunta della reazione iniziale: {e}")
+    # Controlla se il messaggio contiene un link
+    text = update.message.text.strip()
+    link_match = re.search(r'https?://\S+', text)
+
+    if link_match:  # Reazione 👍 solo se c'è un link
+        try:
+            await context.bot.set_message_reaction(chat_id, update.message.message_id, "👍")
+        except Exception as e:
+            logging.error(f"Errore durante l'aggiunta della reazione 👍: {e}")
+    else:
+        logging.info("Messaggio ricevuto senza link: nessuna reazione 👍")
+
 
     # Controlla se l'utente è autorizzato
     if user_id not in ALLOWED_IDS and chat_id not in ALLOWED_IDS:
@@ -173,7 +228,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             if is_audio and file_extension == '.mp3':
                 # Invia solo il file audio se "audio" è specificato
-                caption = f"{username}\n🔗 [Link]({url})"
+                caption = f"🔗 [Link]({url})"
                 await update.message.reply_audio(open(filepath, "rb"), caption=caption, parse_mode="Markdown")
                 
                 # Cancella il file MP3 dopo l'invio
@@ -186,11 +241,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return  # Esci dopo aver inviato l'audio
             elif not is_audio:
                 if file_extension in ['.jpg', '.jpeg', '.png']:
-                    caption = f"{username}\n🔗 [Link]({url})"
+                    caption = f"🔗 [Link]({url})"
                     media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
                 elif file_extension in ['.mp4', '.webm']:
-                    duration = calculate_duration(filepath)
-                    caption = f"{username}\n🔗 [Link]({url})\n🕒 *{duration}* | 💾 *{size_human}*"
+                    description, duration, uploader, uploader_url, extractor, like_count_formatted = get_video_details(url, COOKIES_PATH)
+                    uploader_hyperlink = f"[{uploader}]({uploader_url})" if uploader_url else uploader
+                    caption = (
+                        f"🔗 [Link {extractor}]({url})\n"
+                        f"👤 {uploader_hyperlink}\n"
+                        f"🕒 *{duration}* | 👍 *{like_count_formatted}*\n"
+                        f"📝 {description}\n"
+                    )
+
                     media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
                 else:
                     logging.warning(f"Tipo di file non supportato: {filepath}")
@@ -223,5 +285,6 @@ if __name__ == "__main__":
         exit(1)
 
     app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).write_timeout(60).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
     app.run_polling()
