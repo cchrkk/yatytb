@@ -2,7 +2,7 @@
 FROM python:3.11-alpine
 
 # Installa gli strumenti di build
-RUN apk update && apk add --no-cache \
+RUN apk update && apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --no-cache \
     ffmpeg \
     curl \
     ca-certificates \
