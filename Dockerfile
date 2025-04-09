@@ -2,9 +2,16 @@
 FROM python:3.11-alpine
 
 # Installa gli strumenti di build
-RUN apk add --no-cache build-base ffmpeg-dev
-RUN apk add --no-cache libffi-dev gcc musl-dev
+RUN apk update && apk add --no-cache \
+    ffmpeg \
+    curl \
+    ca-certificates \
+    libmagic \
+    build-base \
+    && rm -rf /var/cache/apk/*
 
+# Copia il file requirements.txt
+COPY requirements.txt .
 # Assicurati che 'wheel' sia installato
 RUN pip install --upgrade pip wheel
 # Installa le dipendenze Python
