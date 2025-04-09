@@ -49,18 +49,17 @@ services:
    
 # Demo Pics 🤳
 
+### Instagram Reel - handled by yt-dlp
+
 ![image](https://github.com/user-attachments/assets/062420f5-919e-43b5-80dc-d0cc6db04373)
 
-- Instagram Reel - handled by yt-dlp
+### Instagram Photos Post - handled by gallery-dl
 
- 
 ![image](https://github.com/user-attachments/assets/2b7467a7-f201-4123-8941-e36c59fd8052)
 
-- Instagram Photos Post - handled by gallery-dl
+### Tiktok Video - handled by yt-dlp
 
 ![image](https://github.com/user-attachments/assets/43697ddc-04a6-4b72-9c9f-7bd0c72f0936)
-
-- Tiktok Video - handled by yt-dlp
 
 ## Contributing 💡
 If you want to contribute to this project, feel free to fork the repository and send a pull request with improvements or bug fixes. 🛠️
