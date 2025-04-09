@@ -1,7 +1,7 @@
 # Usa Python 3.11 su Alpine come immagine base
 FROM python:3.11-alpine
 
-# Installa gli strumenti di build
+# Installa gli strumenti di build 
 RUN apk update && apk add --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --no-cache \
     ffmpeg \
     curl \
