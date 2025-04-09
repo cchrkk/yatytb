@@ -1,6 +1,5 @@
 python-telegram-bot
 yt-dlp
-aiofiles
-humanize
 gallery-dl
-requests
+moviepy
+humanize
