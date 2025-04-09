@@ -7,7 +7,7 @@ RUN apk update && apk add --no-cache \
     curl \
     ca-certificates \
     libmagic \
-    build-base \
+    py3-imageio-ffmpeg \
     && rm -rf /var/cache/apk/*
 
 # Copia il file requirements.txt
