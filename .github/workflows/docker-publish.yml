@@ -2,9 +2,11 @@ name: Build and push Docker image
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-
+    branches:
+      - main
+    paths:
+      - 'bot.py' # Aggiungi altri file se necessario
+      - 'Dockerfile'
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
