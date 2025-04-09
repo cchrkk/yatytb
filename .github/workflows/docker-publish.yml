@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'bot.py' # Aggiungi altri file se necessario
-      #- 'Dockerfile'
+      - 'Dockerfile'
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
