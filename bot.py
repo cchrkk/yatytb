@@ -7,9 +7,8 @@ from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filte
 import logging
 import shutil
 import humanize
-from moviepy import VideoFileClip
 
-# Variabili d'ambiente    
+# Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
 COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.txt")
@@ -36,15 +35,25 @@ for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 def calculate_duration(filepath):
-    """Calcola la durata di un video usando MoviePy."""
+    """Calcola la durata di un video usando ffprobe."""
     try:
-        with VideoFileClip(filepath) as clip:
-            duration = int(clip.duration)
-            minutes, seconds = divmod(duration, 60)
-            hours, minutes = divmod(minutes, 60)
-            return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
+        cmd = [
+            "ffprobe",
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            filepath
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            raise Exception(f"Errore durante l'esecuzione di ffprobe: {result.stderr.strip()}")
+
+        duration = float(result.stdout.strip())
+        minutes, seconds = divmod(int(duration), 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
     except Exception as e:
-        logging.error(f"Errore nel calcolo della durata: {e}")
+        logging.error(f"Errore nel calcolo della durata con ffprobe: {e}")
         return "Durata sconosciuta"
 
 async def download_content(url, is_audio):
