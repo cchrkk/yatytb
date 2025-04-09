@@ -3,7 +3,7 @@ FROM python:3.11-alpine
 
 # Installa gli strumenti di build
 RUN apk add --no-cache build-base ffmpeg-dev
-RUN apk add --no-cache libffi-dev gcc
+RUN apk add --no-cache libffi-dev gcc musl-dev
 
 # Assicurati che 'wheel' sia installato
 RUN pip install --upgrade pip wheel
