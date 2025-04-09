@@ -27,14 +27,18 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
       - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
+      # Optional:- LOG_TO_FILE=false
+      # Optional:- LOG_FILE_PATH=bot.log
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt  # OPTIONAL: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
 ```
 
 ## Environment Variables 🔑
 - **BOT_TOKEN**: Your Telegram bot token (required for authentication). 🆔
   Ask it here [@BotFather](https://t.me/BotFather)
 - **ALLOWED_IDS**: A comma-separated list of user IDs authorized to interact with the bot. 🔗Ask yours here [@getmyid_bot](https://t.me/getmyid_bot)
+- **LOG_TO_FILE**: Enable this to log the console output to a file if your choice.
+- **LOG_FILE_PATH**: Full directory to the .log file 
 
 ## Create your cookies.txt file 🍪
 1. Log in to Instagram/Tiktok/Youtube in your browser. 🌍
