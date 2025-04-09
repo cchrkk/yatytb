@@ -7,6 +7,7 @@ RUN apk update && apk add --no-cache \
     curl \
     ca-certificates \
     libmagic \
+    py3-moviepy \
     py3-imageio-ffmpeg \
     && rm -rf /var/cache/apk/*
 
