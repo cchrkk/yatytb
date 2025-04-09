@@ -1,230 +1,98 @@
 import os
 import re
-import shlex
 import asyncio
-import aiofiles
+import tempfile
 from telegram import Update, InputMediaPhoto, InputMediaVideo, InputMediaAudio
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
-import yt_dlp
-import humanize
-import subprocess
 import logging
 import shutil
-import requests
+import humanize
+from moviepy import VideoFileClip
 
-def add_reaction(bot_token, chat_id, message_id, reaction):
-    try:
-        url = f"https://api.telegram.org/bot{bot_token}/addMessageReaction"
-        payload = {
-            "chat_id": chat_id,
-            "message_id": message_id,
-            "reaction": reaction
-        }
-        response = requests.post(url, data=payload)
-        if response.status_code == 200:
-            logging.info(f"Reazione '{reaction}' aggiunta al messaggio {message_id} nella chat {chat_id}")
-        else:
-            logging.error(f"Errore durante l'aggiunta della reazione: {response.json()}")
-    except Exception as e:
-        logging.error(f"Errore durante la chiamata HTTP per aggiungere la reazione: {e}")
-
-def delete_folder(folder_path):
-    try:
-        if os.path.exists(folder_path):
-            shutil.rmtree(folder_path)  # Rimuove la cartella e tutto il contenuto
-            logging.info(f"Cartella rimossa con successo: {folder_path}")
-        else:
-            logging.warning(f"Cartella non trovata: {folder_path}")
-    except PermissionError as e:
-        logging.error(f"Accesso negato durante la rimozione della cartella: {folder_path} - {e}")
-    except Exception as e:
-        logging.error(f"Errore generico durante la rimozione della cartella: {folder_path} - {e}")
-
-# Elenco dei logger da limitare
-loggers_to_limit = [
-    "concurrent.futures",
-    "concurrent",
-    "asyncio",
-    "telegram.request.BaseRequest",
-    "telegram.request",
-    "telegram",
-    "httpx",
-    "rich",
-    "telegram.request.HTTPXRequest",
-    "telegram.Bot",
-    "telegram.ext.AIORateLimiter",
-    "telegram.ext",
-    "telegram.ext.ExtBot",
-    "tornado.access",
-    "tornado",
-    "tornado.application",
-    "tornado.general",
-    "telegram.ext.Updater",
-    "telegram.ext.Application",
-    "telegram.ext.JobQueue",
-    "telegram.ext.ConversationHandler",
-    "urllib3.util.retry",
-    "urllib3.util",
-    "urllib3",
-    "urllib3.connection",
-    "urllib3.response",
-    "urllib3.connectionpool",
-    "urllib3.poolmanager",
-    "charset_normalizer",
-    "requests"
-]
-
-# Imposta tutti i logger al livello WARNING o ERROR
-for logger_name in loggers_to_limit:
-    logging.getLogger(logger_name).setLevel(logging.WARNING)
-
-# Configura il logger generale
-logging.basicConfig(
-    level=logging.INFO,  # Mostra solo gli errori del tuo script
-    format='[%(asctime)s] %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # Per Docker
-    ]
-)
-
-
-
-
-# Funzione per leggere e pulire gli ID consentiti dalle variabili di ambiente
-def get_allowed_ids():
-    try:
-        raw_ids = os.getenv("ALLOWED_IDS", "")
-        # Rimuovi spazi e virgolette e converti in set di interi
-        return set(map(int, raw_ids.replace('"', '').replace("'", "").split(",")))
-    except ValueError as e:
-        logging.error(f"Errore nella conversione degli ALLOWED_IDS: {e}")
-        return set()
-
-# Leggi gli ID consentiti e altre variabili di ambiente
-ALLOWED_IDS = get_allowed_ids()
+# Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
+ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
 COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.txt")
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
+LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
+LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
 
-def get_duration_from_file(filepath):
-    if not os.path.isfile(filepath):
-        return "File non trovato"
-
+# Configurazione logging
+handlers = [logging.StreamHandler()]
+if LOG_TO_FILE and LOG_FILE_PATH:
     try:
-        result = subprocess.run(
-            [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                filepath
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        duration_str = result.stdout.strip()
-        if not duration_str:
-            return "Durata sconosciuta"
-        duration = float(duration_str)
-        
-        hours = int(duration // 3600)
-        minutes = int((duration % 3600) // 60)
-        seconds = int(duration % 60)
-
-        if hours:
-            return f"{hours}:{minutes:02d}:{seconds:02d}"
-        else:
-            return f"{minutes}:{seconds:02d}"
+        handlers.append(logging.FileHandler(LOG_FILE_PATH))
     except Exception as e:
-        logging.error(f"Errore nel calcolo durata: {e}")
+        logging.error(f"Errore durante la configurazione del file di log: {e}")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s - %(message)s',
+    handlers=handlers
+)
+
+# Ridurre il rumore nei log
+for logger_name in ["telegram", "httpx", "asyncio"]:
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+def calculate_duration(filepath):
+    """Calcola la durata di un video usando MoviePy."""
+    try:
+        with VideoFileClip(filepath) as clip:
+            duration = int(clip.duration)
+            minutes, seconds = divmod(duration, 60)
+            hours, minutes = divmod(minutes, 60)
+            return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
+    except Exception as e:
+        logging.error(f"Errore nel calcolo della durata: {e}")
         return "Durata sconosciuta"
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    chat_id = update.message.chat.id
-    total_size_bytes = 0  # Inizializza la variabile per calcolare il peso totale
-    link_match = None  # Inizializza `link_match` come None per evitare errori
-
-    # Controlla se l'utente o il gruppo è nell'elenco consentito
-    if user_id not in ALLOWED_IDS and chat_id not in ALLOWED_IDS:
-        return
-
-    if not update.message or not update.message.text:
-        return
-
-    text = update.message.text.strip()
-    link_match = re.search(r'https?://\S+', text)  # Cerca il link nel messaggio
-
-    # Aggiungi la reazione solo se viene trovato un link
-    if link_match:
-        try:
-            await context.bot.set_message_reaction(
-                chat_id=chat_id,
-                message_id=update.message.message_id,
-                reaction="👍"  # Emoji della reazione
-            )
-        except Exception as e:
-            logging.error(f"Errore durante l'aggiunta della reazione: {e}")
-
-    if not link_match:
-        return
-
-
-    url = link_match.group(0)
-    is_audio = "audio" in text.lower()
-    
-    logging.info(f"URL ricevuto: {url}")
-    description = ""
-    downloaded_files = []
-
-    instagram_folder = os.path.join(DOWNLOAD_DIR, 'instagram')
-    # Cancellare la cartella solo se si sta gestendo un URL Instagram
-    if re.match(r'https://(www\.)?instagram\.com/p/', url):
-        try:
-            print("Uso gallery-dl per questo URL")
+async def download_content(url, is_audio):
+    """Gestisce il download del contenuto usando yt-dlp o gallery-dl."""
+    try:
+        if "instagram.com/p/" in url:
+            # Usa gallery-dl per i post di Instagram
+            logging.info("Utilizzo di gallery-dl per il download di un post da Instagram")
             cmd = [
                 "gallery-dl",
                 "--cookies", COOKIES_PATH,
                 "-d", DOWNLOAD_DIR,
                 url
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            print(f"gallery-dl output:\n{result.stdout}\n{result.stderr}")
+            result = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+            logging.info(f"Output di gallery-dl:\n{stdout.decode()}\n{stderr.decode()}")
 
-            # Naviga nella cartella e prendi i file
-            instagram_folder = os.path.join(DOWNLOAD_DIR, 'instagram')
-            if os.path.exists(instagram_folder):
-                for root, dirs, files in os.walk(instagram_folder):
-                    for file in files:
-                        downloaded_files.append(os.path.join(root, file))
+            if result.returncode != 0:
+                raise Exception(f"Errore durante il download con gallery-dl: {stderr.decode()}")
 
-            # Elimina la cartella solo se viene usata
-            delete_folder(instagram_folder)
-
-        except Exception as e:
-            logging.error(f"Errore con gallery-dl: {e}")
-            await update.message.reply_text("Errore con gallery-dl")
-            
-
-
-    else:
-        # Altrimenti usa yt-dlp (audio/video/reel ecc.)
-        output_template = os.path.join(DOWNLOAD_DIR, '%(title).80s.%(ext)s')
-        ytdlp_cmd = [
-            "yt-dlp",
-            "--cookies", COOKIES_PATH,
-            "-o", output_template,
-            url
-        ]
-
-        if "audio" in text.lower():
-            ytdlp_cmd += ["-x", "--audio-format", "mp3"]
-            logging.info("Scaricamento solo audio richiesto")
+            # Ritorna solo i file scaricati, ignorando le directory
+            return sorted(
+                [
+                    os.path.join(root, file)
+                    for root, _, files in os.walk(DOWNLOAD_DIR)
+                    for file in files
+                ],
+                key=os.path.getmtime,
+                reverse=True
+            )
         else:
-            logging.info("Scaricamento video richiesto")
+            # Usa yt-dlp per reel di Instagram e altri URL
+            output_template = os.path.join(DOWNLOAD_DIR, '%(title).80s.%(ext)s')
+            ytdlp_cmd = [
+                "yt-dlp",
+                "--cookies", COOKIES_PATH,
+                "-o", output_template,
+                url
+            ]
+            if is_audio:
+                ytdlp_cmd += ["-x", "--audio-format", "mp3"]
 
-        try:
-            logging.info(f"Esecuzione yt-dlp: {' '.join(ytdlp_cmd)}")
+            logging.info(f"Esecuzione di yt-dlp: {' '.join(ytdlp_cmd)}")
             proc = await asyncio.create_subprocess_exec(
                 *ytdlp_cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -232,85 +100,111 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             stdout, stderr = await proc.communicate()
             logging.info(f"yt-dlp output:\n{stdout.decode()}\n{stderr.decode()}")
-        except Exception as e:
-            logging.error(f"Errore con yt-dlp: {e}")
-            await update.message.reply_text("Errore con yt-dlp")
 
-    # Trova file scaricati
-    if not downloaded_files:
-        downloaded_files = sorted(
-            [os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR)],
-            key=os.path.getmtime,
-            reverse=True
-        )
+            if "ERROR:" in stderr.decode():
+                raise Exception("Errore durante il download con yt-dlp")
 
-    if not downloaded_files:
+            return sorted(
+                [os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))],
+                key=os.path.getmtime,
+                reverse=True
+            )
+    except Exception as e:
+        logging.error(f"Errore durante il download: {e}")
+        return []
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gestisce i messaggi ricevuti dal bot."""
+    if not update.message or not update.message.text:
         return
 
-    # Inizializza lista per le immagini da inviare
-    media_group = []
-    caption = f"@{update.message.from_user.username or 'utente'} \n"
-    caption += f"[🔗LINK]({url})"
+    user_id = update.message.from_user.id
+    chat_id = update.message.chat.id
 
-    # Gestisci le immagini separatamente dai video
+    # Aggiungi reazione iniziale 👍
+    try:
+        await context.bot.set_message_reaction(chat_id, update.message.message_id, "👍")
+    except Exception as e:
+        logging.error(f"Errore durante l'aggiunta della reazione iniziale: {e}")
+
+    # Controlla se l'utente è autorizzato
+    if user_id not in ALLOWED_IDS and chat_id not in ALLOWED_IDS:
+        return
+
+    text = update.message.text.strip()
+    link_match = re.search(r'https?://\S+', text)
+    if not link_match:
+        return
+
+    url = link_match.group(0)
+    is_audio = "audio" in text.lower()
+    logging.info(f"URL ricevuto: {url}")
+
+    # Scarica il contenuto
+    downloaded_files = await download_content(url, is_audio)
+    if not downloaded_files:
+        await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+        return
+
+    # Prepara e invia i file
+    media_group = []
+    username = f"@{update.message.from_user.username}" if update.message.from_user.username else "utente"
+
     for filepath in downloaded_files:
         try:
             size_bytes = os.path.getsize(filepath)
-            total_size_bytes += size_bytes  # Somma il peso del file corrente
             size_human = humanize.naturalsize(size_bytes)
-
             file_extension = os.path.splitext(filepath)[1].lower()
-            if file_extension in ['.jpg', '.jpeg', '.png']:
-                media_group.append(InputMediaPhoto(open(filepath, "rb")))
-            elif file_extension == '.mp4':
-                duration = get_duration_from_file(filepath)
-                caption_media = caption + f" | 🕒 {duration} | 💾 {size_human}\n"
-                media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption_media, parse_mode='Markdown'))
-            elif file_extension == '.mp3':
-                media_group.append(InputMediaAudio(open(filepath, "rb"), parse_mode='Markdown'))
-            else:
-                logging.warning(f"Tipo di file non supportato: {filepath}")
+
+            if is_audio and file_extension == '.mp3':
+                # Invia solo il file audio se "audio" è specificato
+                caption = f"{username}\n🔗 [Link]({url})"
+                await update.message.reply_audio(open(filepath, "rb"), caption=caption, parse_mode="Markdown")
+                
+                # Cancella il file MP3 dopo l'invio
+                try:
+                    os.remove(filepath)
+                    logging.info(f"File audio eliminato: {filepath}")
+                except Exception as e:
+                    logging.error(f"Errore durante l'eliminazione del file audio {filepath}: {e}")
+                
+                return  # Esci dopo aver inviato l'audio
+            elif not is_audio:
+                if file_extension in ['.jpg', '.jpeg', '.png']:
+                    caption = f"{username}\n🔗 [Link]({url})"
+                    media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
+                elif file_extension in ['.mp4', '.webm']:
+                    duration = calculate_duration(filepath)
+                    caption = f"{username}\n🔗 [Link]({url})\n🕒 *{duration}* | 💾 *{size_human}*"
+                    media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
+                else:
+                    logging.warning(f"Tipo di file non supportato: {filepath}")
         except Exception as e:
-            logging.error(f"Errore durante l'invio del file {filepath}: {e}")
+            logging.error(f"Errore durante la preparazione del file {filepath}: {e}")
 
-    # Cancella i file SOLO dopo l'invio
-    for filepath in downloaded_files:
-        try:
-            os.remove(filepath)  # Rimuovi i file scaricati
-        except Exception as e:
-            logging.error(f"Errore durante la rimozione del file {filepath}: {e}")
-
-    from itertools import islice
-
-    # Funzione per dividere la lista in chunk
-    def chunk_list(seq, size):
-        it = iter(seq)
-        return iter(lambda: list(islice(it, size)), [])
-
-    # Dividi i file in gruppi e inviali separatamente
-    if media_group:
-        from itertools import islice
-
-        # Funzione per dividere la lista in chunk
-        def chunk_list(seq, size):
-            it = iter(seq)
-            return iter(lambda: list(islice(it, size)), [])
-
-        # Dividi i file in gruppi e inviali separatamente
-        for media_chunk in chunk_list(media_group, 10):  # Max 10 elementi
+    # Invia i file multimediali (immagini e video) solo se "audio" non è specificato
+    if not is_audio and media_group:
+        for media_chunk in [media_group[i:i + 10] for i in range(0, len(media_group), 10)]:
             try:
                 await update.message.reply_media_group(media=media_chunk)
             except Exception as e:
-                logging.error(f"Errore durante l'invio del gruppo: {e}")
+                logging.error(f"Errore durante l'invio del gruppo di media: {e}")
+                await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                return
 
-        # Mostra il messaggio finale solo se ci sono più di una foto
-        if len([item for item in media_group if isinstance(item, InputMediaPhoto)]) > 1:
-            total_size_human = humanize.naturalsize(total_size_bytes)
-            final_caption = f"@{update.message.from_user.username or 'utente'} |  [🔗LINK]({url}) \n💾 {total_size_human}"
-            await update.message.reply_text(final_caption, parse_mode='Markdown')
+    # Cancella tutti i file dopo l'invio
+    for filepath in downloaded_files:
+        try:
+            os.remove(filepath)
+            logging.info(f"File eliminato: {filepath}")
+        except Exception as e:
+            logging.error(f"Errore durante l'eliminazione del file {filepath}: {e}")
+
+    await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
+
 if __name__ == "__main__":
     if not TOKEN or not ALLOWED_IDS:
-        logging.error("TOKEN del bot o ALLOWED_IDS non impostati correttamente")
+        logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
 
     app = ApplicationBuilder().token(TOKEN).build()
