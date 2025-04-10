@@ -22,6 +22,10 @@ LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
 API_URL = "http://telegram-api:8081"  # URL dell'API locale
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# Controlla se il file cookies.txt esiste
+if not os.path.exists(COOKIES_PATH):
+    logging.warning(f"Il file cookies.txt non è stato trovato in {COOKIES_PATH}. Alcune funzionalità potrebbero non funzionare.")
+
 bot = Bot(token=BOT_TOKEN, server=API_URL)
 dp = Dispatcher(bot)
 
@@ -44,11 +48,13 @@ for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 def get_video_details(url, cookies_path):
-    """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
+    """Recupera dettagli video da yt-dlp."""
     try:
-        cmd = ["yt-dlp", "-J", "--cookies", cookies_path, url]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        cmd = ["yt-dlp", "-J", url]
+        if os.path.exists(cookies_path):
+            cmd.extend(["--cookies", cookies_path])
         
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
             raise Exception(f"Errore durante l'esecuzione di yt-dlp: {result.stderr.strip()}")
         

@@ -58,7 +58,9 @@ Required
 1. Log in to Instagram/Tiktok/Youtube in your browser. 🌍
 2. Export the cookies using a browser extension like [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) or ["EditThisCookie"](https://www.editthiscookie.com) . 🔐 ([read more here](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp))
 3. Save the cookies as a `.txt` file, and name it `cookies.txt`. 💾
-4. Place this `cookies.txt` file in the project directory (or where you prefer) and ensure it is mounted as a volume in `/app/cookies/cookies.txt` in the container.
+4. Place this `cookies.txt` file in the project directory and ensure it is mounted as a volume in `/app/cookies/cookies.txt` in the container.
+
+**Note**: If the `cookies.txt` file is not provided, some features (e.g., downloading tiktok/private content/etc.) may not work.
 
 ## How It Works ⚡
 1. Send a video or post link (YouTube, Instagram) to the bot. 📨
