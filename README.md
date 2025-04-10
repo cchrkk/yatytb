@@ -1,4 +1,4 @@
-
+![image](https://github.com/user-attachments/assets/20eadb48-f19c-44c4-b17c-b7e96beaa504)
 # Yet Another yt-dlp Telegram Bot 🎥📥
 
 This project is a Telegram bot that allows you to download videos and audio using [yt-dlp](https://github.com/yt-dlp/yt-dlp) or [gallery-dl](https://github.com/mikf/gallery-dl) directly on Telegram. You can send links of videos and posts from platforms like YouTube and Instagram, and the bot will send you the files as media. The bot also supports images from Instagram, which are sent as a media group with a single caption. 📲✨
@@ -55,16 +55,25 @@ services:
 
 ### Instagram Reel - handled by yt-dlp
 
-![image](https://github.com/user-attachments/assets/062420f5-919e-43b5-80dc-d0cc6db04373)
+![image](https://github.com/user-attachments/assets/2573f840-121f-4981-bf5e-0611a21b9c95)
+
 
 ### Instagram Photos Post - handled by gallery-dl
 
-![image](https://github.com/user-attachments/assets/2b7467a7-f201-4123-8941-e36c59fd8052)
+![image](https://github.com/user-attachments/assets/e756bb59-fc2e-4cfb-bcff-b20dc1400c80)
+
 
 ### Tiktok Video - handled by yt-dlp
 
-![image](https://github.com/user-attachments/assets/43697ddc-04a6-4b72-9c9f-7bd0c72f0936)
+![image](https://github.com/user-attachments/assets/8ed6f77a-1cd9-4f30-bd31-881b55f2a2ab)
 
+## Todo List ✔️
+- Use aiogram with local api to handle bigger files easily
+- Fix Instagram photos post caption
+- Fix Telegram photos post
+- More variables to control max file size, max files to download per photos post, custom caption
+- Cleanup code
+  
 ## Contributing 💡
 If you want to contribute to this project, feel free to fork the repository and send a pull request with improvements or bug fixes. 🛠️
 
