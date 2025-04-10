@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - aiogram
     paths:
       - 'bot.py' # Aggiungi altri file se necessario
       - 'Dockerfile'

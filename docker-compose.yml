@@ -7,11 +7,12 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_IDS=${ALLOWED_IDS}
     volumes:
-      - /root/cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt
     depends_on:
       - telegram-api  # Dipendenza dal servizio API personalizzato
-
   telegram-api:
+    container_name: yatytb-telegram-api
+    # Utilizza l'immagine del bot API di Telegram
     image: aiogram/telegram-bot-api:latest
     container_name: telegram-api
     environment:

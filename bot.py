@@ -15,7 +15,7 @@ from aiogram.utils import executor
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
-COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.txt")
+COOKIES_PATH = "/app/cookies/cookies.txt"
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
