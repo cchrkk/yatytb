@@ -5,7 +5,7 @@ RUN apk update && apk add --no-cache ffmpeg && rm -rf /var/cache/apk/*
 COPY requirements.txt .
 # Assicurati che 'wheel' sia installato
 RUN pip install --upgrade pip wheel
-# Installa le dipendenze Python
+# Installa le dipendenze Python 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
