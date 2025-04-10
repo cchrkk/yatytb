@@ -4,9 +4,19 @@ services:
     container_name: yatytb
     image: ghcr.io/cchrkk/yatytb:latest
     environment:
-      - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
-      - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
-      # Optional:- LOG_TO_FILE=false
-      # Optional:- LOG_FILE_PATH=bot.log
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_IDS=${ALLOWED_IDS}
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+      - /root/cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+    depends_on:
+      - telegram-api  # Dipendenza dal servizio API personalizzato
+
+  telegram-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram-api
+    environment:
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID}  # Inserisci il tuo API ID
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH}  # Inserisci il tuo API Hash
+      - TELEGRAM_BOT_TOKEN=${BOT_TOKEN}
+    ports:
+      - "7771:8081"  # Porta per l'API locale

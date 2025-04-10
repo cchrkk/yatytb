@@ -9,6 +9,8 @@ import shutil
 import humanize
 import subprocess
 import json
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -17,6 +19,11 @@ COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.tx
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
+API_URL = "http://telegram-api:8081"  # URL dell'API locale
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+bot = Bot(token=BOT_TOKEN, server=API_URL)
+dp = Dispatcher(bot)
 
 # Configurazione logging
 handlers = [logging.StreamHandler()]
@@ -35,33 +42,6 @@ logging.basicConfig(
 # Ridurre il rumore nei log
 for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
-
-# def calculate_duration(filepath):
-    # """Calcola la durata di un video usando ffprobe."""
-    # if not os.path.isfile(filepath):
-        # logging.error(f"File non trovato: {filepath}")
-        # return "Durata sconosciuta"
-
-    # try:
-        # logging.info(f"Esecuzione di ffprobe per il file: {filepath}")
-        # cmd = [
-            # "ffprobe",
-            # "-v", "error",
-            # "-show_entries", "format=duration",
-            # "-of", "default=noprint_wrappers=1:nokey=1",
-            # filepath
-        # ]
-        # result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        # if result.returncode != 0:
-            # raise Exception(f"Errore durante l'esecuzione di ffprobe: {result.stderr.strip()}")
-
-        # duration = float(result.stdout.strip())
-        # minutes, seconds = divmod(int(duration), 60)
-        # hours, minutes = divmod(minutes, 60)
-        # return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
-    # except Exception as e:
-        # logging.error(f"Errore nel calcolo della durata con ffprobe: {e}")
-        # return "Durata sconosciuta"
 
 def get_video_details(url, cookies_path):
     """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
@@ -86,6 +66,7 @@ def get_video_details(url, cookies_path):
     except Exception as e:
         logging.error(f"Errore nel recupero dei dettagli video: {e}")
         return "Descrizione non disponibile", "Durata sconosciuta", "Uploader sconosciuto", "", "Extractor sconosciuto", "N/D"
+
 def format_duration(seconds):
     """Converte i secondi in formato minuti:secondi."""
     try:
@@ -279,6 +260,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
+@dp.message_handler(commands=["start"])
+async def start(message: types.Message):
+    await message.reply("Ciao! Sono un bot di test con aiogram e API locale.")
+
+@dp.message_handler(content_types=types.ContentType.ANY)
+async def handle_aiogram_message(message: types.Message):
+    await message.reply("Sto ancora lavorando per gestire file di grandi dimensioni!")
+    
 if __name__ == "__main__":
     if not TOKEN or not ALLOWED_IDS:
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
@@ -288,3 +277,5 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).write_timeout(60).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
     app.run_polling()
+
+    executor.start_polling(dp, skip_updates=True)
