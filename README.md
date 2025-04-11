@@ -39,11 +39,22 @@ services:
 - **LOG_TO_FILE**: Enable this to log the console output to a file if your choice.
 - **LOG_FILE_PATH**: Full directory to the .log file 
 
-## Create your cookies.txt file 🍪
-1. Log in to Instagram/Tiktok/Youtube in your browser. 🌍
-2. Export the cookies using a browser extension like "EditThisCookie". 🔐
-3. Save the cookies as a `.txt` file, and name it `cookies.txt`. 💾
-4. Place this `cookies.txt` file and mount the volume in the docker-compose.
+## Passing Cookies to yt-dlp 🍪
+### Why Pass Cookies?
+Passing cookies to `yt-dlp` is useful for:
+1. Bypassing login requirements when an extractor doesn't support explicit login functionality.
+2. Handling CAPTCHA challenges on certain websites (e.g., YouTube, CloudFlare).
+
+### Exporting Cookies from browser with yt-dlp
+To save cookies as a `.txt` file:
+```bash
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt
+```
+This method extracts *all cookies* from your browser—so make sure to keep the file secure.
+
+Alternatively, you can use browser extensions to export cookies:
+- **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?pli=1)** for Chrome  
+- **[cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt)** for Firefox  
 
 ## How It Works ⚡
 1. Send a video or post link (YouTube, Instagram) to the bot. 📨
