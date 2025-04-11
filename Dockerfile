@@ -1,13 +1,12 @@
 # Usa Python 3.11 su Alpine come immagine base
 FROM python:3.11-alpine
 RUN apk update && apk add --no-cache ffmpeg && rm -rf /var/cache/apk/*
-# Copia il file requirements.txt
-COPY requirements.txt .
+
 # Assicurati che 'wheel' sia installato
 RUN pip install --upgrade pip wheel
-# Installa le dipendenze Python 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+
+# Installa le dipendenze Python direttamente
+RUN pip install python-telegram-bot yt-dlp gallery-dl humanize
 
 # Crea le directory per i download e i cookies
 RUN mkdir -p /app/downloads /app/cookies
