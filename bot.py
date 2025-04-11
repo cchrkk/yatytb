@@ -1,3 +1,40 @@
+#                     __            __ ___.    
+#      ___.__._____ _/  |_ ___.__._/  |\_ |__  
+#     <   |  |\__  \\   __<   |  |\   __\ __ \ 
+#      \___  | / __ \|  |  \___  | |  | | \_\ \
+#      / ____|(____  /__|  / ____| |__| |___  /
+#      \/          \/      \/               \/ 
+#
+# Questo bot Telegram consente di scaricare contenuti multimediali (video, audio, immagini) da piattaforme come YouTube e Instagram.
+# Utilizza le librerie `yt-dlp` e `gallery-dl` per gestire i download e supporta diverse funzionalità:
+#
+# Funzionalità principali:
+# - Scarica video e audio da YouTube, Instagram e altre piattaforme supportate da `yt-dlp`.
+# - Gestisce i post di Instagram (foto e video) utilizzando `gallery-dl`.
+# - Supporta il download di audio in formato MP3 se specificato nel messaggio.
+# - Recupera dettagli del video (descrizione, durata, uploader, ecc.) per i video scaricati.
+# - Invia i file scaricati come messaggi multimediali su Telegram.
+# - Supporta l'invio di gruppi di media (es. più immagini in un unico messaggio).
+# - Aggiunge reazioni ai messaggi con link validi ("👍") o segnala errori con reazioni ("💔").
+# - Elimina i file scaricati dal server dopo l'invio per risparmiare spazio.
+#
+# Sicurezza:
+# - Controlla che solo gli utenti autorizzati (definiti tramite la variabile d'ambiente `ALLOWED_IDS`) possano interagire con il bot.
+#
+# Logging:
+# - Registra le attività del bot, con opzione per salvare i log su file (abilitabile tramite `LOG_TO_FILE`).
+#
+# Reazioni:
+# - Aggiunge una reazione "👍" ai messaggi che contengono un link valido.
+# - Aggiunge una reazione "💔" in caso di errore durante il download o l'invio.
+#
+# Come funziona:
+# 1. L'utente invia un messaggio contenente un link al bot.
+# 2. Il bot verifica se l'utente è autorizzato e se il messaggio contiene un link valido.
+# 3. In base al tipo di contenuto (audio, video, immagini), il bot utilizza `yt-dlp` o `gallery-dl` per scaricare i file.
+# 4. I file scaricati vengono inviati all'utente come messaggi multimediali.
+# 5. Dopo l'invio, i file vengono eliminati dal server per mantenere pulita la directory di lavoro.
+
 import os
 import re
 import asyncio
@@ -13,8 +50,8 @@ import json
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
-COOKIES_PATH = os.path.join(os.getenv("COOKIE_DIR", "/app/cookies"), "cookies.txt")
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
+COOKIES_PATH = "/app/cookies/cookies.txt"
+DOWNLOAD_DIR = "/app/downloads"
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
 
@@ -35,33 +72,6 @@ logging.basicConfig(
 # Ridurre il rumore nei log
 for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
-
-# def calculate_duration(filepath):
-    # """Calcola la durata di un video usando ffprobe."""
-    # if not os.path.isfile(filepath):
-        # logging.error(f"File non trovato: {filepath}")
-        # return "Durata sconosciuta"
-
-    # try:
-        # logging.info(f"Esecuzione di ffprobe per il file: {filepath}")
-        # cmd = [
-            # "ffprobe",
-            # "-v", "error",
-            # "-show_entries", "format=duration",
-            # "-of", "default=noprint_wrappers=1:nokey=1",
-            # filepath
-        # ]
-        # result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        # if result.returncode != 0:
-            # raise Exception(f"Errore durante l'esecuzione di ffprobe: {result.stderr.strip()}")
-
-        # duration = float(result.stdout.strip())
-        # minutes, seconds = divmod(int(duration), 60)
-        # hours, minutes = divmod(minutes, 60)
-        # return f"{hours}:{minutes:02}:{seconds:02}" if hours else f"{minutes}:{seconds:02}"
-    # except Exception as e:
-        # logging.error(f"Errore nel calcolo della durata con ffprobe: {e}")
-        # return "Durata sconosciuta"
 
 def get_video_details(url, cookies_path):
     """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
@@ -280,11 +290,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
 if __name__ == "__main__":
+    # ASCII art
+    ascii_art = """
+                __            __ ___.    
+ ___.__._____ _/  |_ ___.__._/  |\_ |__  
+<   |  |\__  \\   __<   |  |\   __\ __ \ 
+ \___  | / __ \|  |  \___  | |  | | \_\ \
+ / ____|(____  /__|  / ____| |__| |___  /
+ \/          \/      \/               \/ 
+    """
+    print(ascii_art)
+
     if not TOKEN or not ALLOWED_IDS:
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
 
     app = ApplicationBuilder().token(TOKEN).build()
-    app = ApplicationBuilder().token(TOKEN).write_timeout(60).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
     app.run_polling()
