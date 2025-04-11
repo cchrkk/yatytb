@@ -9,4 +9,4 @@ services:
       # Optional:- LOG_TO_FILE=false
       # Optional:- LOG_FILE_PATH=bot.log
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt # Optional: Only set if cookies needed
