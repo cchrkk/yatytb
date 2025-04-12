@@ -45,15 +45,15 @@ Passing cookies to `yt-dlp` is useful for:
 1. Bypassing login requirements when an extractor doesn't support explicit login functionality.
 2. Handling CAPTCHA challenges on certain websites (e.g., YouTube, CloudFlare).
 
-### Exporting Cookies from browser with yt-dlp
+### Exporting Cookies from browser with yt-dlp (you will need it in your pc)
 To save cookies as a `.txt` file:
 ```bash
 yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
-This method extracts *all cookies* from your browser—so make sure to keep the file secure.
-
-Alternatively, you can use browser extensions to export cookies:
-- **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?pli=1)** for Chrome  
+This method extracts *all cookies* from your browser—so make sure to keep the file secure. Use firefox/vivaldi/chrome/etc. in the command.
+### Exporting Cookies from browser with browser extension (easy way)
+Use these extensions to download the cookies.txt file:
+- **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?pli=1)** for Chromium-based browsers
 - **[cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt)** for Firefox  
 
 ## How It Works ⚡
