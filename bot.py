@@ -27,6 +27,7 @@
 # Reazioni:
 # - Aggiunge una reazione "👍" ai messaggi che contengono un link valido.
 # - Aggiunge una reazione "💔" in caso di errore durante il download o l'invio.
+# - Aggiunge una reazione "👌" dopo l'invio dei file scaricati.
 #
 # Come funziona:
 # 1. L'utente invia un messaggio contenente un link al bot.

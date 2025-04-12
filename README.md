@@ -39,18 +39,19 @@ services:
 - **LOG_TO_FILE**: Enable this to log the console output to a file if your choice.
 - **LOG_FILE_PATH**: Full directory to the .log file 
 
-## Passing Cookies to yt-dlp 🍪
+## Passing Cookies 🍪
 ### Why Pass Cookies?
-Passing cookies to `yt-dlp` is useful for:
+Passing cookies to `yt-dlp` or `gallery-dl` is useful for:
 1. Bypassing login requirements when an extractor doesn't support explicit login functionality.
 2. Handling CAPTCHA challenges on certain websites (e.g., YouTube, CloudFlare).
 
-### Exporting Cookies from browser with yt-dlp (you will need it in your pc)
+### Exporting Cookies from browser with yt-dlp (you will need to install it in your pc)
 To save cookies as a `.txt` file:
 ```bash
 yt-dlp --cookies-from-browser chrome --cookies cookies.txt
 ```
 This method extracts *all cookies* from your browser—so make sure to keep the file secure. Use firefox/vivaldi/chrome/etc. in the command.
+
 ### Exporting Cookies from browser with browser extension (easy way)
 Use these extensions to download the cookies.txt file:
 - **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?pli=1)** for Chromium-based browsers
