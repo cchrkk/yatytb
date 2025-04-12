@@ -6,7 +6,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
       - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
-      # Optional:- LOG_TO_FILE=false
-      # Optional:- LOG_FILE_PATH=bot.log
+      # - LOG_TO_FILE=false #OPTIONAL: Set to true to log to a file
+      # - LOG_FILE_PATH=bot.log #OPTIONAL: Set the path to the log file
     volumes:
       - ./cookies.txt:/app/cookies/cookies.txt # Optional: Only set if cookies needed
