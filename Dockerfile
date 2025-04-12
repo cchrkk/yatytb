@@ -6,7 +6,7 @@ RUN apk update && apk add --no-cache ffmpeg && rm -rf /var/cache/apk/*
 RUN pip install --upgrade pip wheel
 
 # Install Python dependencies directly
-RUN pip install python-telegram-bot yt-dlp gallery-dl humanize
+RUN pip install python-telegram-bot yt-dlp gallery-dl humanize dotenv
 
 # Create directories for downloads and cookies
 RUN mkdir -p /app/downloads /app/cookies
