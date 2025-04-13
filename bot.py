@@ -27,7 +27,6 @@
 # Reazioni:
 # - Aggiunge una reazione "👍" ai messaggi che contengono un link valido.
 # - Aggiunge una reazione "💔" in caso di errore durante il download o l'invio.
-# - Aggiunge una reazione "👌" al termine del download e dell'invio dei file.
 #
 # Come funziona:
 # 1. L'utente invia un messaggio contenente un link al bot.
@@ -47,29 +46,14 @@ import shutil
 import humanize
 import subprocess
 import json
-from dotenv import load_dotenv
 
-def get_cookies_path():
-    """
-    Restituisce il percorso del file dei cookie.
-    Controlla prima nella directory del progetto, altrimenti usa il percorso predefinito.
-    """
-    project_cookies_path = os.path.join(os.getcwd(), "cookies.txt")
-    default_cookies_path = "/app/cookies/cookies.txt"
-
-    if os.path.exists(project_cookies_path):
-        return project_cookies_path
-    else:
-        return default_cookies_path
-    
 # Variabili d'ambiente
-load_dotenv()
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(map(int, os.getenv("ALLOWED_IDS", "").split(",")))
-COOKIES_PATH = get_cookies_path()
+COOKIES_PATH = "/app/cookies/cookies.txt"
+DOWNLOAD_DIR = "/app/downloads"
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
 
 # Configurazione logging
 handlers = [logging.StreamHandler()]
@@ -88,7 +72,6 @@ logging.basicConfig(
 # Ridurre il rumore nei log
 for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
-
 
 def get_video_details(url, cookies_path):
     """
@@ -167,29 +150,6 @@ def format_like_count(number):
     except ValueError:
         return "N/D"  # Valore di default in caso di errore
 
-async def run_ytdlp_command(ytdlp_cmd):
-    """
-    Esegue il comando yt-dlp e gestisce l'output.
-    """
-    result = await asyncio.create_subprocess_exec(
-        *ytdlp_cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await result.communicate()
-
-    # Decodifica l'output con gestione degli errori
-    stdout_decoded = stdout.decode(errors="replace")  # Sostituisce i caratteri non validi
-    stderr_decoded = stderr.decode(errors="replace")  # Sostituisce i caratteri non validi
-
-    logging.info(f"yt-dlp output:\n{stdout_decoded}")
-    logging.error(f"yt-dlp error:\n{stderr_decoded}")
-
-    if result.returncode != 0:
-        raise Exception(f"Errore durante il download con yt-dlp: {stderr_decoded}")
-
-    return stdout_decoded
-
 async def download_content(url, is_audio):
     """
     Scarica contenuti multimediali da un URL utilizzando yt-dlp o gallery-dl.
@@ -235,22 +195,29 @@ async def download_content(url, is_audio):
             )
         else:
             # Usa yt-dlp per reel di Instagram e altri URL
+            output_template = os.path.join(DOWNLOAD_DIR, '%(title).80s.%(ext)s')
             ytdlp_cmd = [
                 "yt-dlp",
                 "--cookies", COOKIES_PATH,
-                "--merge-output-format", "mp4",
-                "-o", os.path.join(DOWNLOAD_DIR, "%(title).80s.%(ext)s"),
+                "--merge-output-format", "mp4",  # Separato correttamente
+                "-o", output_template,
                 url
             ]
 
             if is_audio:
                 ytdlp_cmd += ["-x", "--audio-format", "mp3"]
 
-            try:
-                output = await run_ytdlp_command(ytdlp_cmd)
-                logging.info(f"Download completato: {output}")
-            except Exception as e:
-                logging.error(f"Errore durante il download: {e}")
+            logging.info(f"Esecuzione di yt-dlp: {' '.join(ytdlp_cmd)}")
+            proc = await asyncio.create_subprocess_exec(
+                *ytdlp_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            logging.info(f"yt-dlp output:\n{stdout.decode()}\n{stderr.decode()}")
+
+            if "ERROR:" in stderr.decode():
+                raise Exception("Errore durante il download con yt-dlp")
 
             return sorted(
                 [os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))],
