@@ -5,7 +5,7 @@
 #      / ____|(____  /__|  / ____| |__| |___  / 
 #      \/          \/      \/               \/ 
 #
-# Questo bot Telegram consente di scaricare contenuti multimediali (video, audio, immagini) da piattaforme come YouTube e Instagram.
+# Questo bot Telegram consente di scaricare contenuti multimediali (video, audio, immagini) da piattaforme come YouTube e Instagram. 
 # Utilizza le librerie `yt-dlp` e `gallery-dl` per gestire i download e supporta diverse funzionalità:
 #
 # Funzionalità principali:
