@@ -2,10 +2,10 @@
 #      ___.__._____ _/  |_ ___.__._/  |\_ |__  
 #     <   |  |\__  \\   __<   |  |\   __\ __ \ 
 #      \___  | / __ \|  |  \___  | |  | | \_\ \
-#      / ____|(____  /__|  / ____| |__| |___  / 
+#      / ____|(____  /__|  / ____| |__| |___  /
 #      \/          \/      \/               \/ 
 #
-# Questo bot Telegram consente di scaricare contenuti multimediali (video, audio, immagini) da piattaforme come YouTube e Instagram. 
+# Questo bot Telegram consente di scaricare contenuti multimediali (video, audio, immagini) da piattaforme come YouTube e Instagram.
 # Utilizza le librerie `yt-dlp` e `gallery-dl` per gestire i download e supporta diverse funzionalità:
 #
 # Funzionalità principali:
@@ -74,22 +74,7 @@ for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 def get_video_details(url, cookies_path):
-    """
-    Recupera i dettagli di un video utilizzando yt-dlp.
-    Dettagli inclusi:
-    - Descrizione
-    - Durata (in formato leggibile)
-    - Uploader e URL dell'uploader
-    - Extractor (piattaforma)
-    - Numero di like (formattato)
-    
-    Args:
-        url (str): URL del video.
-        cookies_path (str): Percorso del file dei cookie.
-
-    Returns:
-        tuple: Dettagli del video (descrizione, durata, uploader, uploader_url, extractor, like_count_formatted).
-    """
+    """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
     try:
         cmd = ["yt-dlp", "-J", "--cookies", cookies_path, url]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -111,17 +96,8 @@ def get_video_details(url, cookies_path):
     except Exception as e:
         logging.error(f"Errore nel recupero dei dettagli video: {e}")
         return "Descrizione non disponibile", "Durata sconosciuta", "Uploader sconosciuto", "", "Extractor sconosciuto", "N/D"
-
 def format_duration(seconds):
-    """
-    Converte una durata in secondi in formato minuti:secondi.
-
-    Args:
-        seconds (int): Durata in secondi.
-
-    Returns:
-        str: Durata formattata come "minuti:secondi".
-    """
+    """Converte i secondi in formato minuti:secondi."""
     try:
         seconds = int(seconds)
         minutes, seconds = divmod(seconds, 60)
@@ -130,15 +106,7 @@ def format_duration(seconds):
         return "Durata non valida"
         
 def format_like_count(number):
-    """
-    Converte un numero in formato abbreviato con suffissi (es. 1k, 1M).
-
-    Args:
-        number (int): Numero da formattare.
-
-    Returns:
-        str: Numero formattato con suffissi.
-    """
+    """Converte i numeri grandi in formato abbreviato con suffissi."""
     try:
         number = int(number)
         if number >= 1_000_000:
@@ -151,17 +119,7 @@ def format_like_count(number):
         return "N/D"  # Valore di default in caso di errore
 
 async def download_content(url, is_audio):
-    """
-    Scarica contenuti multimediali da un URL utilizzando yt-dlp o gallery-dl.
-    Supporta il download di video, audio e post di Instagram.
-
-    Args:
-        url (str): URL del contenuto da scaricare.
-        is_audio (bool): Indica se scaricare solo l'audio.
-
-    Returns:
-        list: Elenco dei file scaricati.
-    """
+    """Gestisce il download del contenuto usando yt-dlp o gallery-dl."""
     try:
         if "instagram.com/p/" in url:
             # Usa gallery-dl per i post di Instagram
@@ -229,18 +187,7 @@ async def download_content(url, is_audio):
         return []
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Gestisce i messaggi ricevuti dal bot.
-    Controlla se il messaggio contiene un link, verifica l'autorizzazione dell'utente,
-    scarica il contenuto e invia i file scaricati.
-
-    Args:
-        update (Update): Oggetto Update di Telegram.
-        context (ContextTypes.DEFAULT_TYPE): Contesto del messaggio.
-
-    Returns:
-        None
-    """
+    """Gestisce i messaggi ricevuti dal bot."""
     if not update.message or not update.message.text:
         return
 
@@ -259,10 +206,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         logging.info("Messaggio ricevuto senza link: nessuna reazione 👍")
 
+
     # Controlla se l'utente è autorizzato
     if user_id not in ALLOWED_IDS and chat_id not in ALLOWED_IDS:
         return
 
+    text = update.message.text.strip()
+    link_match = re.search(r'https?://\S+', text)
     if not link_match:
         return
 
@@ -340,17 +290,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
 if __name__ == "__main__":
-    # ASCII art
-    ascii_art = r"""
-                __            __ ___.    
- ___.__._____ _/  |_ ___.__._/  |\_ |__  
-<   |  |\__  \\   __<   |  |\   __\ __ \ 
- \___  | / __ \|  |  \___  | |  | | \_\ \
- / ____|(____  /__|  / ____| |__| |___  /
- \/          \/      \/               \/ 
-    """
-    print(ascii_art)
-
     if not TOKEN or not ALLOWED_IDS:
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
