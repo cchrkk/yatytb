@@ -195,6 +195,7 @@ async def download_content(url, is_audio):
 
 async def send_large_file(update: Update, filepath: str, caption: str, is_video: bool = False):
     """Gestisce l'invio di file grandi in chunk."""
+    temp_files = []  # Lista per tenere traccia dei file temporanei
     try:
         file_size = os.path.getsize(filepath)
         if file_size <= CHUNK_SIZE:
@@ -214,9 +215,13 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                 temp_chunk.write(chunk)
                 temp_chunk.close()
                 temp_chunk_path = temp_chunk.name
+                temp_files.append(temp_chunk_path)  # Aggiungi il file alla lista
 
                 for attempt in range(MAX_RETRIES):
                     try:
+                        if not os.path.exists(temp_chunk_path):
+                            raise FileNotFoundError(f"File temporaneo non trovato: {temp_chunk_path}")
+                            
                         with open(temp_chunk_path, "rb") as chunk_file:
                             if is_video:
                                 await update.message.reply_video(
@@ -235,17 +240,23 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                         if attempt == MAX_RETRIES - 1:
                             raise e
                         await asyncio.sleep(RETRY_DELAY)
-                    finally:
-                        try:
-                            if os.path.exists(temp_chunk_path):
-                                os.unlink(temp_chunk_path)
-                        except Exception as e:
-                            logging.error(f"Errore durante l'eliminazione del file temporaneo {temp_chunk_path}: {e}")
+                    except Exception as e:
+                        logging.error(f"Errore durante l'invio del chunk {i}: {e}")
+                        raise
 
         return True
     except Exception as e:
         logging.error(f"Errore durante l'invio del file grande {filepath}: {e}")
         return False
+    finally:
+        # Pulisci tutti i file temporanei alla fine
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+                    logging.debug(f"File temporaneo eliminato: {temp_file}")
+            except Exception as e:
+                logging.error(f"Errore durante l'eliminazione del file temporaneo {temp_file}: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestisce i messaggi ricevuti dal bot."""
