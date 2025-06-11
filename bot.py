@@ -263,8 +263,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"🕒 *{duration}* | 👍 *{like_count_formatted}*\n"
                         f"📝 {description}\n"
                     )
-
-                    media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
+                    # Se il file è più grande di 50MB, invialo come documento
+                    if size_bytes > 50 * 1024 * 1024:
+                        with open(filepath, "rb") as doc_file:
+                            await update.message.reply_document(doc_file, caption=caption, parse_mode="Markdown")
+                    else:
+                        media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
                 else:
                     logging.warning(f"Tipo di file non supportato: {filepath}")
         except Exception as e:
