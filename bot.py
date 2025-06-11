@@ -46,6 +46,8 @@ import shutil
 import humanize
 import subprocess
 import json
+from telegram.constants import ParseMode
+from telegram.error import TelegramError, NetworkError
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -72,6 +74,11 @@ logging.basicConfig(
 # Ridurre il rumore nei log
 for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+# Configurazione timeout e chunk size
+CHUNK_SIZE = 50 * 1024 * 1024  # 50MB per chunk
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # secondi
 
 def get_video_details(url, cookies_path):
     """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
@@ -186,6 +193,55 @@ async def download_content(url, is_audio):
         logging.error(f"Errore durante il download: {e}")
         return []
 
+async def send_large_file(update: Update, filepath: str, caption: str, is_video: bool = False):
+    """Gestisce l'invio di file grandi in chunk."""
+    try:
+        file_size = os.path.getsize(filepath)
+        if file_size <= CHUNK_SIZE:
+            # Se il file è piccolo, invialo normalmente
+            with open(filepath, "rb") as file:
+                if is_video:
+                    await update.message.reply_video(file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                else:
+                    await update.message.reply_document(file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+            return True
+
+        # Per file grandi, dividi in chunk
+        with open(filepath, "rb") as file:
+            for i in range(0, file_size, CHUNK_SIZE):
+                chunk = file.read(CHUNK_SIZE)
+                temp_chunk = tempfile.NamedTemporaryFile(delete=False)
+                temp_chunk.write(chunk)
+                temp_chunk.close()
+
+                for attempt in range(MAX_RETRIES):
+                    try:
+                        with open(temp_chunk.name, "rb") as chunk_file:
+                            if is_video:
+                                await update.message.reply_video(
+                                    chunk_file,
+                                    caption=caption if i == 0 else None,
+                                    parse_mode=ParseMode.MARKDOWN
+                                )
+                            else:
+                                await update.message.reply_document(
+                                    chunk_file,
+                                    caption=caption if i == 0 else None,
+                                    parse_mode=ParseMode.MARKDOWN
+                                )
+                        break
+                    except (TelegramError, NetworkError) as e:
+                        if attempt == MAX_RETRIES - 1:
+                            raise e
+                        await asyncio.sleep(RETRY_DELAY)
+                    finally:
+                        os.unlink(temp_chunk.name)
+
+        return True
+    except Exception as e:
+        logging.error(f"Errore durante l'invio del file grande {filepath}: {e}")
+        return False
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gestisce i messaggi ricevuti dal bot."""
     if not update.message or not update.message.text:
@@ -253,7 +309,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif not is_audio:
                 if file_extension in ['.jpg', '.jpeg', '.png']:
                     caption = f"🔗 [Link]({url})"
-                    media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
+                    media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
                 elif file_extension in ['.mp4', '.webm']:
                     description, duration, uploader, uploader_url, extractor, like_count_formatted = get_video_details(url, COOKIES_PATH)
                     uploader_hyperlink = f"[{uploader}]({uploader_url})" if uploader_url else uploader
@@ -263,12 +319,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"🕒 *{duration}* | 👍 *{like_count_formatted}*\n"
                         f"📝 {description}\n"
                     )
-                    # Se il file è più grande di 50MB, invialo come documento
+                    
+                    # Usa la nuova funzione per file grandi
                     if size_bytes > 50 * 1024 * 1024:
-                        with open(filepath, "rb") as doc_file:
-                            await update.message.reply_document(doc_file, caption=caption, parse_mode="Markdown")
+                        success = await send_large_file(update, filepath, caption, is_video=True)
+                        if not success:
+                            await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                            return
                     else:
-                        media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode="Markdown"))
+                        media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
                 else:
                     logging.warning(f"Tipo di file non supportato: {filepath}")
         except Exception as e:
@@ -320,6 +379,6 @@ if __name__ == "__main__":
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
 
-    app = ApplicationBuilder().token(TOKEN).read_timeout(120).write_timeout(120).build()
+    app = ApplicationBuilder().token(TOKEN).read_timeout(300).write_timeout(300).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
     app.run_polling()
