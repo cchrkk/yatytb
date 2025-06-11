@@ -451,9 +451,23 @@ if __name__ == "__main__":
     ╚════════════════════════════════════════════════════════════╝
     """)
 
-    # Pulisci la cartella downloads all'avvio
-    asyncio.run(cleanup_download_dir())
+    async def main():
+        # Pulisci la cartella downloads all'avvio
+        await cleanup_download_dir()
+        
+        # Inizializza e avvia il bot
+        app = ApplicationBuilder().token(TOKEN).read_timeout(300).write_timeout(300).build()
+        app.add_handler(MessageHandler(filters.ALL, handle_message))
+        await app.initialize()
+        await app.start()
+        await app.run_polling()
 
-    app = ApplicationBuilder().token(TOKEN).read_timeout(300).write_timeout(300).build()
-    app.add_handler(MessageHandler(filters.ALL, handle_message))
-    app.run_polling()
+    # Esegui il bot
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("Bot fermato dall'utente")
+    except Exception as e:
+        logging.error(f"Errore durante l'esecuzione del bot: {e}")
+    finally:
+        logging.info("Bot terminato")
