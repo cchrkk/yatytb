@@ -224,6 +224,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     downloaded_files = await download_content(url, is_audio)
     if not downloaded_files:
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+        asyncio.create_task(delayed_cleanup_download_dir())
         return
 
     # Prepara e invia i file
@@ -288,6 +289,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.error(f"Errore durante l'eliminazione del file {filepath}: {e}")
 
     await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
+    # Avvia la cancellazione ritardata della cartella downloads
+    asyncio.create_task(delayed_cleanup_download_dir())
+
+async def delayed_cleanup_download_dir(delay_seconds=10):
+    """Attende delay_seconds e poi elimina la cartella DOWNLOAD_DIR."""
+    await asyncio.sleep(delay_seconds)
+    try:
+        if os.path.exists(DOWNLOAD_DIR):
+            shutil.rmtree(DOWNLOAD_DIR)
+            logging.info(f"Cartella {DOWNLOAD_DIR} eliminata dopo {delay_seconds} secondi.")
+            os.makedirs(DOWNLOAD_DIR, exist_ok=True)  # Ricrea la cartella vuota
+    except Exception as e:
+        logging.error(f"Errore durante la cancellazione della cartella {DOWNLOAD_DIR}: {e}")
 
 if __name__ == "__main__":
     if not TOKEN or not ALLOWED_IDS:
