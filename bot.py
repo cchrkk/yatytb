@@ -213,10 +213,11 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                 temp_chunk = tempfile.NamedTemporaryFile(delete=False)
                 temp_chunk.write(chunk)
                 temp_chunk.close()
+                temp_chunk_path = temp_chunk.name
 
                 for attempt in range(MAX_RETRIES):
                     try:
-                        with open(temp_chunk.name, "rb") as chunk_file:
+                        with open(temp_chunk_path, "rb") as chunk_file:
                             if is_video:
                                 await update.message.reply_video(
                                     chunk_file,
@@ -235,7 +236,11 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                             raise e
                         await asyncio.sleep(RETRY_DELAY)
                     finally:
-                        os.unlink(temp_chunk.name)
+                        try:
+                            if os.path.exists(temp_chunk_path):
+                                os.unlink(temp_chunk_path)
+                        except Exception as e:
+                            logging.error(f"Errore durante l'eliminazione del file temporaneo {temp_chunk_path}: {e}")
 
         return True
     except Exception as e:
