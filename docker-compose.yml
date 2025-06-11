@@ -10,3 +10,6 @@ services:
       # - LOG_FILE_PATH=bot.log #OPTIONAL: Set the path to the log file
     volumes:
       - ./cookies.txt:/app/cookies/cookies.txt # Optional: Only set if cookies needed
+    restart: always
+    stop_grace_period: 30s
+    stop_signal: SIGTERM

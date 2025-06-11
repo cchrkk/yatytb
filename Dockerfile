@@ -26,5 +26,5 @@ ENV LOG_FILE_PATH=bot.log
 # Create a volume for downloads
 VOLUME ["/app/downloads"]
 
-# Start the bot
-CMD ["python", "bot.py"]
+# Start the bot with proper signal handling
+ENTRYPOINT ["python", "bot.py"]

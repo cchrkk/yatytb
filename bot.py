@@ -78,9 +78,10 @@ for logger_name in ["telegram", "httpx", "asyncio"]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 # Configurazione timeout e chunk size
-CHUNK_SIZE = 50 * 1024 * 1024  # 50MB per chunk
-MAX_RETRIES = 3
-RETRY_DELAY = 5  # secondi
+CHUNK_SIZE = 20 * 1024 * 1024  # Ridotto a 20MB per chunk
+MAX_RETRIES = 5  # Aumentato il numero di tentativi
+RETRY_DELAY = 10  # Aumentato il delay tra i tentativi
+UPLOAD_TIMEOUT = 300  # Timeout di 5 minuti per l'upload
 
 def get_video_details(url, cookies_path):
     """Recupera dettagli video (descrizione, durata, uploader, uploader_url, extractor, e like_count) da yt-dlp."""
@@ -228,9 +229,25 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
             # Se il file è piccolo, invialo normalmente
             with open(filepath, "rb") as file:
                 if is_video:
-                    await update.message.reply_video(file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    await update.message.reply_video(
+                        file, 
+                        caption=caption, 
+                        parse_mode=ParseMode.MARKDOWN,
+                        read_timeout=UPLOAD_TIMEOUT,
+                        write_timeout=UPLOAD_TIMEOUT,
+                        connect_timeout=UPLOAD_TIMEOUT,
+                        pool_timeout=UPLOAD_TIMEOUT
+                    )
                 else:
-                    await update.message.reply_document(file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    await update.message.reply_document(
+                        file, 
+                        caption=caption, 
+                        parse_mode=ParseMode.MARKDOWN,
+                        read_timeout=UPLOAD_TIMEOUT,
+                        write_timeout=UPLOAD_TIMEOUT,
+                        connect_timeout=UPLOAD_TIMEOUT,
+                        pool_timeout=UPLOAD_TIMEOUT
+                    )
             return True
 
         # Per file grandi, dividi in chunk
@@ -259,13 +276,21 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                                 await update.message.reply_video(
                                     chunk_file,
                                     caption=caption if i == 0 else None,
-                                    parse_mode=ParseMode.MARKDOWN
+                                    parse_mode=ParseMode.MARKDOWN,
+                                    read_timeout=UPLOAD_TIMEOUT,
+                                    write_timeout=UPLOAD_TIMEOUT,
+                                    connect_timeout=UPLOAD_TIMEOUT,
+                                    pool_timeout=UPLOAD_TIMEOUT
                                 )
                             else:
                                 await update.message.reply_document(
                                     chunk_file,
                                     caption=caption if i == 0 else None,
-                                    parse_mode=ParseMode.MARKDOWN
+                                    parse_mode=ParseMode.MARKDOWN,
+                                    read_timeout=UPLOAD_TIMEOUT,
+                                    write_timeout=UPLOAD_TIMEOUT,
+                                    connect_timeout=UPLOAD_TIMEOUT,
+                                    pool_timeout=UPLOAD_TIMEOUT
                                 )
                         chunk_time = time.time() - chunk_start_time
                         logging.info(f"Chunk {chunk_number}/{total_chunks} inviato in {chunk_time:.2f} secondi")
@@ -274,12 +299,12 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                         logging.error(f"Timeout durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
                         if attempt == MAX_RETRIES - 1:
                             raise
-                        await asyncio.sleep(RETRY_DELAY)
+                        await asyncio.sleep(RETRY_DELAY * (attempt + 1))  # Aumenta il delay ad ogni tentativo
                     except (TelegramError, NetworkError) as e:
                         logging.error(f"Errore di rete durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
                         if attempt == MAX_RETRIES - 1:
                             raise
-                        await asyncio.sleep(RETRY_DELAY)
+                        await asyncio.sleep(RETRY_DELAY * (attempt + 1))
                     except Exception as e:
                         logging.error(f"Errore durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
                         raise
