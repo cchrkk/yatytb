@@ -47,7 +47,8 @@ import humanize
 import subprocess
 import json
 from telegram.constants import ParseMode
-from telegram.error import TelegramError, NetworkError
+from telegram.error import TelegramError, NetworkError, TimedOut
+import time
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -193,11 +194,35 @@ async def download_content(url, is_audio):
         logging.error(f"Errore durante il download: {e}")
         return []
 
+async def cleanup_download_dir():
+    """Pulisce la cartella dei download all'avvio."""
+    try:
+        if os.path.exists(DOWNLOAD_DIR):
+            for filename in os.listdir(DOWNLOAD_DIR):
+                file_path = os.path.join(DOWNLOAD_DIR, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.remove(file_path)
+                        logging.info(f"File eliminato durante la pulizia iniziale: {file_path}")
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                        logging.info(f"Cartella eliminata durante la pulizia iniziale: {file_path}")
+                except Exception as e:
+                    logging.error(f"Errore durante l'eliminazione di {file_path}: {e}")
+        else:
+            os.makedirs(DOWNLOAD_DIR)
+            logging.info(f"Cartella downloads creata: {DOWNLOAD_DIR}")
+    except Exception as e:
+        logging.error(f"Errore durante la pulizia iniziale della cartella {DOWNLOAD_DIR}: {e}")
+
 async def send_large_file(update: Update, filepath: str, caption: str, is_video: bool = False):
     """Gestisce l'invio di file grandi in chunk."""
     temp_files = []  # Lista per tenere traccia dei file temporanei
+    start_time = time.time()
     try:
         file_size = os.path.getsize(filepath)
+        logging.info(f"Inizio invio file grande: {filepath} ({humanize.naturalsize(file_size)})")
+        
         if file_size <= CHUNK_SIZE:
             # Se il file è piccolo, invialo normalmente
             with open(filepath, "rb") as file:
@@ -209,13 +234,19 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
 
         # Per file grandi, dividi in chunk
         with open(filepath, "rb") as file:
+            total_chunks = (file_size + CHUNK_SIZE - 1) // CHUNK_SIZE
             for i in range(0, file_size, CHUNK_SIZE):
+                chunk_start_time = time.time()
                 chunk = file.read(CHUNK_SIZE)
                 temp_chunk = tempfile.NamedTemporaryFile(delete=False)
                 temp_chunk.write(chunk)
                 temp_chunk.close()
                 temp_chunk_path = temp_chunk.name
-                temp_files.append(temp_chunk_path)  # Aggiungi il file alla lista
+                temp_files.append(temp_chunk_path)
+
+                chunk_size = len(chunk)
+                chunk_number = (i // CHUNK_SIZE) + 1
+                logging.info(f"Invio chunk {chunk_number}/{total_chunks} ({humanize.naturalsize(chunk_size)})")
 
                 for attempt in range(MAX_RETRIES):
                     try:
@@ -235,18 +266,29 @@ async def send_large_file(update: Update, filepath: str, caption: str, is_video:
                                     caption=caption if i == 0 else None,
                                     parse_mode=ParseMode.MARKDOWN
                                 )
+                        chunk_time = time.time() - chunk_start_time
+                        logging.info(f"Chunk {chunk_number}/{total_chunks} inviato in {chunk_time:.2f} secondi")
                         break
-                    except (TelegramError, NetworkError) as e:
+                    except TimedOut as e:
+                        logging.error(f"Timeout durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
                         if attempt == MAX_RETRIES - 1:
-                            raise e
+                            raise
+                        await asyncio.sleep(RETRY_DELAY)
+                    except (TelegramError, NetworkError) as e:
+                        logging.error(f"Errore di rete durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
+                        if attempt == MAX_RETRIES - 1:
+                            raise
                         await asyncio.sleep(RETRY_DELAY)
                     except Exception as e:
-                        logging.error(f"Errore durante l'invio del chunk {i}: {e}")
+                        logging.error(f"Errore durante l'invio del chunk {chunk_number}/{total_chunks}: {e}")
                         raise
 
+        total_time = time.time() - start_time
+        logging.info(f"File {filepath} inviato con successo in {total_time:.2f} secondi")
         return True
     except Exception as e:
-        logging.error(f"Errore durante l'invio del file grande {filepath}: {e}")
+        total_time = time.time() - start_time
+        logging.error(f"Errore durante l'invio del file grande {filepath} dopo {total_time:.2f} secondi: {e}")
         return False
     finally:
         # Pulisci tutti i file temporanei alla fine
@@ -394,6 +436,23 @@ if __name__ == "__main__":
     if not TOKEN or not ALLOWED_IDS:
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
+
+    # Messaggio di avvio
+    logging.info("""
+    ╔════════════════════════════════════════════════════════════╗
+    ║                     Bot Telegram Avviato                    ║
+    ║                                                            ║
+    ║  Funzionalità:                                             ║
+    ║  - Download video da YouTube e altre piattaforme           ║
+    ║  - Download post da Instagram                              ║
+    ║  - Supporto per file audio                                 ║
+    ║  - Gestione file grandi                                    ║
+    ║                                                            ║
+    ╚════════════════════════════════════════════════════════════╝
+    """)
+
+    # Pulisci la cartella downloads all'avvio
+    asyncio.run(cleanup_download_dir())
 
     app = ApplicationBuilder().token(TOKEN).read_timeout(300).write_timeout(300).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
