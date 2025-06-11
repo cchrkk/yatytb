@@ -293,15 +293,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     asyncio.create_task(delayed_cleanup_download_dir())
 
 async def delayed_cleanup_download_dir(delay_seconds=10):
-    """Attende delay_seconds e poi elimina la cartella DOWNLOAD_DIR."""
+    """Attende delay_seconds e poi elimina tutti i file nella cartella DOWNLOAD_DIR, lasciando la cartella intatta."""
     await asyncio.sleep(delay_seconds)
     try:
         if os.path.exists(DOWNLOAD_DIR):
-            shutil.rmtree(DOWNLOAD_DIR)
-            logging.info(f"Cartella {DOWNLOAD_DIR} eliminata dopo {delay_seconds} secondi.")
-            os.makedirs(DOWNLOAD_DIR, exist_ok=True)  # Ricrea la cartella vuota
+            for filename in os.listdir(DOWNLOAD_DIR):
+                file_path = os.path.join(DOWNLOAD_DIR, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.remove(file_path)
+                        logging.info(f"File eliminato: {file_path}")
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                        logging.info(f"Cartella eliminata: {file_path}")
+                except Exception as e:
+                    logging.error(f"Errore durante l'eliminazione di {file_path}: {e}")
     except Exception as e:
-        logging.error(f"Errore durante la cancellazione della cartella {DOWNLOAD_DIR}: {e}")
+        logging.error(f"Errore durante la pulizia della cartella {DOWNLOAD_DIR}: {e}")
 
 if __name__ == "__main__":
     if not TOKEN or not ALLOWED_IDS:
