@@ -93,7 +93,9 @@ def get_video_details(url, cookies_path):
             raise Exception(f"Errore durante l'esecuzione di yt-dlp: {result.stderr.strip()}")
         
         data = json.loads(result.stdout)
-        description = data.get("description", "Descrizione non disponibile")
+        # Tronca la descrizione a 200 caratteri e aggiungi ... se necessario
+        full_description = data.get("description", "Descrizione non disponibile")
+        description = full_description[:200] + "..." if len(full_description) > 200 else full_description
         duration_seconds = int(data.get("duration", 0))
         duration_formatted = format_duration(duration_seconds)
         uploader = data.get("uploader", "Uploader sconosciuto")
@@ -106,6 +108,7 @@ def get_video_details(url, cookies_path):
     except Exception as e:
         logging.error(f"Errore nel recupero dei dettagli video: {e}")
         return "Descrizione non disponibile", "Durata sconosciuta", "Uploader sconosciuto", "", "Extractor sconosciuto", "N/D"
+
 def format_duration(seconds):
     """Converte i secondi in formato minuti:secondi."""
     try:
