@@ -316,6 +316,6 @@ if __name__ == "__main__":
         logging.error("TOKEN o ALLOWED_IDS non configurati correttamente")
         exit(1)
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(TOKEN).read_timeout(120).write_timeout(120).build()
     app.add_handler(MessageHandler(filters.ALL, handle_message))
     app.run_polling()
