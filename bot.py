@@ -455,12 +455,22 @@ if __name__ == "__main__":
         # Pulisci la cartella downloads all'avvio
         await cleanup_download_dir()
         
-        # Inizializza e avvia il bot
+        # Inizializza il bot
         app = ApplicationBuilder().token(TOKEN).read_timeout(300).write_timeout(300).build()
         app.add_handler(MessageHandler(filters.ALL, handle_message))
+        
+        # Avvia il bot
         await app.initialize()
         await app.start()
-        await app.run_polling()
+        await app.updater.start_polling()
+        
+        try:
+            # Mantieni il bot in esecuzione
+            await app.updater.wait_closed()
+        finally:
+            # Ferma il bot
+            await app.stop()
+            await app.shutdown()
 
     # Esegui il bot
     try:
