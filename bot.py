@@ -394,6 +394,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Il limite massimo è {humanize.naturalsize(MAX_FILE_SIZE)}."
                 )
                 await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                try:
+                    os.remove(filepath)
+                    logging.info(f"File troppo grande eliminato: {filepath}")
+                except Exception as e:
+                    logging.error(f"Errore durante l'eliminazione del file troppo grande {filepath}: {e}")
                 return
 
         # Prepara e invia i file
