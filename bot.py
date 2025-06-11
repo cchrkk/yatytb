@@ -49,6 +49,7 @@ import json
 from telegram.constants import ParseMode
 from telegram.error import TelegramError, NetworkError, TimedOut
 import time
+import signal
 
 # Variabili d'ambiente
 TOKEN = os.environ.get("BOT_TOKEN")
@@ -451,6 +452,14 @@ if __name__ == "__main__":
     ╚════════════════════════════════════════════════════════════╝
     """)
 
+    # Flag per il controllo dell'arresto
+    stop_flag = asyncio.Event()
+
+    def signal_handler():
+        """Gestisce il segnale di arresto."""
+        logging.info("Segnale di arresto ricevuto")
+        stop_flag.set()
+
     async def main():
         # Pulisci la cartella downloads all'avvio
         await cleanup_download_dir()
@@ -465,19 +474,32 @@ if __name__ == "__main__":
         await app.updater.start_polling()
         
         try:
-            # Mantieni il bot in esecuzione
-            await app.updater.wait_closed()
+            # Attendi il segnale di arresto
+            while not stop_flag.is_set():
+                await asyncio.sleep(1)
         finally:
             # Ferma il bot
+            await app.updater.stop()
             await app.stop()
             await app.shutdown()
 
+    # Configura i gestori dei segnali
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, signal_handler)
+
     # Esegui il bot
     try:
-        asyncio.run(main())
+        loop.run_until_complete(main())
     except KeyboardInterrupt:
         logging.info("Bot fermato dall'utente")
     except Exception as e:
         logging.error(f"Errore durante l'esecuzione del bot: {e}")
     finally:
+        try:
+            loop.close()
+        except Exception as e:
+            logging.error(f"Errore durante la chiusura del loop: {e}")
         logging.info("Bot terminato")
