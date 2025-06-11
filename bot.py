@@ -58,6 +58,7 @@ COOKIES_PATH = "/app/cookies/cookies.txt"
 DOWNLOAD_DIR = "/app/downloads"
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB limite massimo
 
 # Configurazione logging
 handlers = [logging.StreamHandler()]
@@ -349,7 +350,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         logging.info("Messaggio ricevuto senza link: nessuna reazione 👍")
 
-
     # Controlla se l'utente è autorizzato
     if user_id not in ALLOWED_IDS and chat_id not in ALLOWED_IDS:
         return
@@ -363,84 +363,105 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_audio = "audio" in text.lower()
     logging.info(f"URL ricevuto: {url}")
 
-    # Scarica il contenuto
-    downloaded_files = await download_content(url, is_audio)
-    if not downloaded_files:
-        await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
-        asyncio.create_task(delayed_cleanup_download_dir())
-        return
-
-    # Prepara e invia i file
-    media_group = []
-    username = f"@{update.message.from_user.username}" if update.message.from_user.username else "utente"
-
-    for filepath in downloaded_files:
-        try:
-            size_bytes = os.path.getsize(filepath)
-            size_human = humanize.naturalsize(size_bytes)
-            file_extension = os.path.splitext(filepath)[1].lower()
-
-            if is_audio and file_extension == '.mp3':
-                # Invia solo il file audio se "audio" è specificato
-                caption = f"🔗 [Link]({url})"
-                await update.message.reply_audio(open(filepath, "rb"), caption=caption, parse_mode="Markdown")
-                
-                # Cancella il file MP3 dopo l'invio
-                try:
-                    os.remove(filepath)
-                    logging.info(f"File audio eliminato: {filepath}")
-                except Exception as e:
-                    logging.error(f"Errore durante l'eliminazione del file audio {filepath}: {e}")
-                
-                return  # Esci dopo aver inviato l'audio
-            elif not is_audio:
-                if file_extension in ['.jpg', '.jpeg', '.png']:
-                    caption = f"🔗 [Link]({url})"
-                    media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
-                elif file_extension in ['.mp4', '.webm']:
-                    description, duration, uploader, uploader_url, extractor, like_count_formatted = get_video_details(url, COOKIES_PATH)
-                    uploader_hyperlink = f"[{uploader}]({uploader_url})" if uploader_url else uploader
-                    caption = (
-                        f"🔗 [Link {extractor}]({url})\n"
-                        f"👤 {uploader_hyperlink}\n"
-                        f"🕒 *{duration}* | 👍 *{like_count_formatted}*\n"
-                        f"📝 {description}\n"
+    try:
+        # Verifica la dimensione del file prima del download
+        if "youtube.com" in url or "youtu.be" in url:
+            cmd = ["yt-dlp", "-J", "--cookies", COOKIES_PATH, url]
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                filesize = data.get("filesize", 0)
+                if filesize > MAX_FILE_SIZE:
+                    await update.message.reply_text(
+                        f"⚠️ Il file è troppo grande ({humanize.naturalsize(filesize)}). "
+                        f"Il limite massimo è {humanize.naturalsize(MAX_FILE_SIZE)}."
                     )
-                    
-                    # Usa la nuova funzione per file grandi
-                    if size_bytes > 50 * 1024 * 1024:
-                        success = await send_large_file(update, filepath, caption, is_video=True)
-                        if not success:
-                            await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
-                            return
-                    else:
-                        media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
-                else:
-                    logging.warning(f"Tipo di file non supportato: {filepath}")
-        except Exception as e:
-            logging.error(f"Errore durante la preparazione del file {filepath}: {e}")
+                    await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                    return
 
-    # Invia i file multimediali (immagini e video) solo se "audio" non è specificato
-    if not is_audio and media_group:
-        for media_chunk in [media_group[i:i + 10] for i in range(0, len(media_group), 10)]:
-            try:
-                await update.message.reply_media_group(media=media_chunk)
-            except Exception as e:
-                logging.error(f"Errore durante l'invio del gruppo di media: {e}")
+        # Scarica il contenuto
+        downloaded_files = await download_content(url, is_audio)
+        if not downloaded_files:
+            await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+            asyncio.create_task(delayed_cleanup_download_dir())
+            return
+
+        # Verifica la dimensione dei file scaricati
+        for filepath in downloaded_files:
+            if os.path.getsize(filepath) > MAX_FILE_SIZE:
+                await update.message.reply_text(
+                    f"⚠️ Il file scaricato è troppo grande ({humanize.naturalsize(os.path.getsize(filepath))}). "
+                    f"Il limite massimo è {humanize.naturalsize(MAX_FILE_SIZE)}."
+                )
                 await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
                 return
 
-    # Cancella tutti i file dopo l'invio
-    for filepath in downloaded_files:
-        try:
-            os.remove(filepath)
-            logging.info(f"File eliminato: {filepath}")
-        except Exception as e:
-            logging.error(f"Errore durante l'eliminazione del file {filepath}: {e}")
+        # Prepara e invia i file
+        media_group = []
+        username = f"@{update.message.from_user.username}" if update.message.from_user.username else "utente"
 
-    await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
-    # Avvia la cancellazione ritardata della cartella downloads
-    asyncio.create_task(delayed_cleanup_download_dir())
+        for filepath in downloaded_files:
+            try:
+                size_bytes = os.path.getsize(filepath)
+                size_human = humanize.naturalsize(size_bytes)
+                file_extension = os.path.splitext(filepath)[1].lower()
+
+                if is_audio and file_extension == '.mp3':
+                    # Invia solo il file audio se "audio" è specificato
+                    caption = f"🔗 [Link]({url})"
+                    await update.message.reply_audio(open(filepath, "rb"), caption=caption, parse_mode="Markdown")
+                    
+                    # Cancella il file MP3 dopo l'invio
+                    try:
+                        os.remove(filepath)
+                        logging.info(f"File audio eliminato: {filepath}")
+                    except Exception as e:
+                        logging.error(f"Errore durante l'eliminazione del file audio {filepath}: {e}")
+                    
+                    return  # Esci dopo aver inviato l'audio
+                elif not is_audio:
+                    if file_extension in ['.jpg', '.jpeg', '.png']:
+                        caption = f"🔗 [Link]({url})"
+                        media_group.append(InputMediaPhoto(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
+                    elif file_extension in ['.mp4', '.webm']:
+                        description, duration, uploader, uploader_url, extractor, like_count_formatted = get_video_details(url, COOKIES_PATH)
+                        uploader_hyperlink = f"[{uploader}]({uploader_url})" if uploader_url else uploader
+                        caption = (
+                            f"🔗 [Link {extractor}]({url})\n"
+                            f"👤 {uploader_hyperlink}\n"
+                            f"🕒 *{duration}* | 👍 *{like_count_formatted}*\n"
+                            f"📝 {description}\n"
+                        )
+                        media_group.append(InputMediaVideo(open(filepath, "rb"), caption=caption, parse_mode=ParseMode.MARKDOWN))
+                    else:
+                        logging.warning(f"Tipo di file non supportato: {filepath}")
+            except Exception as e:
+                logging.error(f"Errore durante la preparazione del file {filepath}: {e}")
+
+        # Invia i file multimediali (immagini e video) solo se "audio" non è specificato
+        if not is_audio and media_group:
+            for media_chunk in [media_group[i:i + 10] for i in range(0, len(media_group), 10)]:
+                try:
+                    await update.message.reply_media_group(media=media_chunk)
+                except Exception as e:
+                    logging.error(f"Errore durante l'invio del gruppo di media: {e}")
+                    await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                    return
+
+        # Cancella tutti i file dopo l'invio
+        for filepath in downloaded_files:
+            try:
+                os.remove(filepath)
+                logging.info(f"File eliminato: {filepath}")
+            except Exception as e:
+                logging.error(f"Errore durante l'eliminazione del file {filepath}: {e}")
+
+        await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
+        # Avvia la cancellazione ritardata della cartella downloads
+        asyncio.create_task(delayed_cleanup_download_dir())
+    except Exception as e:
+        logging.error(f"Errore durante la gestione del messaggio: {e}")
+        await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
 
 async def delayed_cleanup_download_dir(delay_seconds=10):
     """Attende delay_seconds e poi elimina tutti i file nella cartella DOWNLOAD_DIR, lasciando la cartella intatta."""
