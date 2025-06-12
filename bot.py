@@ -132,7 +132,7 @@ def format_like_count(number):
     except ValueError:
         return "N/D"  # Valore di default in caso di errore
 
-async def download_content(url, is_audio):
+async def download_concd ..tent(url, is_audio):
     """Gestisce il download del contenuto usando yt-dlp o gallery-dl."""
     try:
         if "instagram.com/p/" in url:
@@ -345,6 +345,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if link_match:  # Reazione 👍 solo se c'è un link
         try:
             await context.bot.set_message_reaction(chat_id, update.message.message_id, "👍")
+            asyncio.create_task(delayed_cleanup_download_dir())
         except Exception as e:
             logging.error(f"Errore durante l'aggiunta della reazione 👍: {e}")
     else:
@@ -467,6 +468,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Errore durante la gestione del messaggio: {e}")
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+        asyncio.create_task(delayed_cleanup_download_dir())
 
 async def delayed_cleanup_download_dir(delay_seconds=10):
     """Attende delay_seconds e poi elimina tutti i file nella cartella DOWNLOAD_DIR, lasciando la cartella intatta."""
