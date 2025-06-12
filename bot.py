@@ -366,19 +366,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         # Verifica la dimensione del file prima del download
-        if "youtube.com" in url or "youtu.be" in url:
-            cmd = ["yt-dlp", "-J", "--cookies", COOKIES_PATH, url]
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            if result.returncode == 0:
-                data = json.loads(result.stdout)
-                filesize = data.get("filesize", 0)
-                if filesize > MAX_FILE_SIZE:
-                    await update.message.reply_text(
-                        f"⚠️ Il file è troppo grande ({humanize.naturalsize(filesize)}). "
-                        f"Il limite massimo è {humanize.naturalsize(MAX_FILE_SIZE)}."
-                    )
-                    await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
-                    return
+        cmd = ["yt-dlp", "-J", "--cookies", COOKIES_PATH, url]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            # Controlla vari campi che potrebbero contenere la dimensione
+            filesize = None
+            if "filesize" in data:
+                filesize = data["filesize"]
+            elif "filesize_approx" in data:
+                filesize = data["filesize_approx"]
+            elif "filesize_pre" in data:
+                filesize = data["filesize_pre"]
+            
+            if filesize and filesize > MAX_FILE_SIZE:
+                await update.message.reply_text(
+                    f"⚠️ Il file è troppo grande ({humanize.naturalsize(filesize)}). "
+                    f"Il limite massimo è {humanize.naturalsize(MAX_FILE_SIZE)}."
+                )
+                await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+                return
 
         # Scarica il contenuto
         downloaded_files = await download_content(url, is_audio)
