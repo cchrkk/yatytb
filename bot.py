@@ -503,16 +503,12 @@ if __name__ == "__main__":
 
     # Messaggio di avvio
     logging.info("""
-    ╔════════════════════════════════════════════════════════════╗
-    ║                     Bot Telegram Avviato                    ║
-    ║                                                            ║
-    ║  Funzionalità:                                             ║
-    ║  - Download video da YouTube e altre piattaforme           ║
-    ║  - Download post da Instagram                              ║
-    ║  - Supporto per file audio                                 ║
-    ║  - Gestione file grandi                                    ║
-    ║                                                            ║
-    ╚════════════════════════════════════════════════════════════╝
+                     __            __ ___.    
+      ___.__._____ _/  |_ ___.__._/  |\_ |__  
+     <   |  |\__  \\   __<   |  |\   __\ __ \ 
+      \___  | / __ \|  |  \___  | |  | | \_\ \
+      / ____|(____  /__|  / ____| |__| |___  /
+      \/          \/      \/               \/ 
     """)
 
     # Flag per il controllo dell'arresto
