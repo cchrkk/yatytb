@@ -132,7 +132,7 @@ def format_like_count(number):
     except ValueError:
         return "N/D"  # Valore di default in caso di errore
 
-async def download_concd ..tent(url, is_audio):
+async def download_content(url, is_audio):
     """Gestisce il download del contenuto usando yt-dlp o gallery-dl."""
     try:
         if "instagram.com/p/" in url:
