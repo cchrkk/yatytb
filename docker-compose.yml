@@ -4,12 +4,15 @@ services:
     container_name: yatytb
     image: ghcr.io/cchrkk/yatytb:latest
     environment:
-      - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
-      - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
-      # - LOG_TO_FILE=false #OPTIONAL: Set to true to log to a file
-      # - LOG_FILE_PATH=bot.log #OPTIONAL: Set the path to the log file
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_IDS=${ALLOWED_IDS}
+      - MAX_FILE_SIZE_MB=2000
+      - LOG_TO_FILE=false
+      - LOG_FILE_PATH=bot.log
+      - COOKIES_PATH=/app/cookies/cookies.txt
+      - DOWNLOAD_DIR=/app/downloads
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt # Optional: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt
     restart: always
     stop_grace_period: 30s
     stop_signal: SIGTERM

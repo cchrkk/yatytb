@@ -1,30 +1,27 @@
-# Use Python 3.11 on Alpine as the base image
-FROM python:3.11-alpine
+FROM python:3.13-alpine
+
 RUN apk update && apk add --no-cache ffmpeg && rm -rf /var/cache/apk/*
 
-# Ensure 'wheel' is installed
-RUN pip install --upgrade pip wheel
+RUN pip install --no-cache-dir \
+    python-telegram-bot==21.10 \
+    yt-dlp==2024.12.12 \
+    gallery-dl==1.28.0 \
+    humanize==4.12.1
 
-# Install Python dependencies directly
-RUN pip install python-telegram-bot yt-dlp gallery-dl humanize dotenv
-
-# Create directories for downloads and cookies
 RUN mkdir -p /app/downloads /app/cookies
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the bot into the container
 COPY bot.py .
 
-# Set environment variables (modify the values as needed)
 ENV ALLOWED_IDS=changeme
 ENV BOT_TOKEN=changeme
 ENV LOG_TO_FILE=false
 ENV LOG_FILE_PATH=bot.log
+ENV MAX_FILE_SIZE_MB=2000
+ENV COOKIES_PATH=/app/cookies/cookies.txt
+ENV DOWNLOAD_DIR=/app/downloads
 
-# Create a volume for downloads
 VOLUME ["/app/downloads"]
 
-# Start the bot with proper signal handling
 ENTRYPOINT ["python", "bot.py"]
