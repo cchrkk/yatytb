@@ -314,7 +314,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # --- Main ---
-async def main():
+def main():
     errors = validate_env()
     if errors:
         for e in errors:
@@ -324,15 +324,15 @@ async def main():
     logging.info(
         """
                      __            __ ___.
-      ___.__._____ _/  |_ ___.__._/  |\\_ |__
-     <   |  |\\__  \\\\   __<   |  |\\   __\\ __ \\
-      \\___  | / __ \\|  |  \\___  | |  | | \\_\\ \\
+      ___.__._____ _/  |_ ___.__._/  |\_ |__
+     <   |  |\__  \\\\   __<   |  |\   __\ __ \\
+      \___  | / __ \|  |  \___  | |  | | \_\ \\
       / ____|(____  /__|  / ____| |__| |___  /
-      \\/          \\/      \\/               \\/
+      \/          \/      \/               \/
     """
     )
 
-    await cleanup()
+    asyncio.run(cleanup())
 
     app = (
         ApplicationBuilder()
@@ -348,12 +348,12 @@ async def main():
     app.add_handler(MessageHandler(filters.ALL, handle_message))
 
     print("🤖 Bot avviato — premi Ctrl+C per fermarlo")
-    await app.run_polling()
+    app.run_polling()
 
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
         logging.info("Bot fermato dall'utente")
     except Exception as e:
