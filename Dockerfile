@@ -1,12 +1,15 @@
 FROM python:3.13-alpine
 
-RUN apk update && apk add --no-cache ffmpeg nodejs npm && rm -rf /var/cache/apk/*
-
-RUN pip install --no-cache-dir \
-    python-telegram-bot \
+RUN apk update && apk add --no-cache \
+    ffmpeg \
+    nodejs \
     yt-dlp \
+    yt-dlp-ejs \
+    yt-dlp-ejs-rt-nodejs \
     gallery-dl \
-    humanize
+    && rm -rf /var/cache/apk/*
+
+RUN pip install --no-cache-dir python-telegram-bot humanize
 
 RUN mkdir -p /app/downloads /app/cookies
 
