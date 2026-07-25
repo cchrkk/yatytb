@@ -7,18 +7,18 @@ This project is a Telegram bot that allows you to download videos and audio usin
 - Downloads videos and audio using [yt-dlp](https://github.com/yt-dlp/yt-dlp) with EJS challenge solving 🎧🎬
 - Handles Instagram posts using [gallery-dl](https://github.com/mikf/gallery-dl) 📸📲
 - Supports sending video and image files on Telegram 💬📹
-- **Local Bot API** (`yatytb-tg-api`) — bypassa il limite di 50 MB di Telegram 🚀
-- Comandi `/start`, `/help`
-- Download in coda (un file alla volta)
-- Cookie auth per siti bloccati 🍪
-- Docker Compose pronto all'uso 🐳
+- **Local Bot API** (`yatytb-tg-api`) — bypass the 50 MB Telegram upload limit 🚀
+- `/start` and `/help` commands
+- Download queue (one file at a time)
+- Cookie auth for restricted sites 🍪
+- Docker Compose ready 🐳
 
 ## Prerequisites ⚙️
 
 - Docker 🐳
 - Docker Compose 🛠️
 - Telegram (duh 🫠)
-- API ID e API Hash da [my.telegram.org/apps](https://my.telegram.org/apps)
+- API ID and API Hash from [my.telegram.org/apps](https://my.telegram.org/apps)
 
 ## Docker Compose 🚀
 
@@ -61,21 +61,21 @@ volumes:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `BOT_TOKEN` | ✅ | — | Token da [@BotFather](https://t.me/BotFather) |
-| `TELEGRAM_API_ID` | ✅ | — | Da [my.telegram.org/apps](https://my.telegram.org/apps) |
-| `TELEGRAM_API_HASH` | ✅ | — | Da [my.telegram.org/apps](https://my.telegram.org/apps) |
-| `ALLOWED_IDS` | ✅ | — | ID utenti autorizzati (separati da virgola) |
-| `BASE_URL` | ❌ | — | URL del Bot API locale (`http://yatytb-tg-api:8081/bot{token}`) |
-| `MAX_FILE_SIZE_MB` | ❌ | 2000 | Dimensione massima download (upload Telegram 50 MB senza local API) |
-| `COOKIES_PATH` | ❌ | `/app/cookies/cookies.txt` | Path del file cookies |
-| `DOWNLOAD_DIR` | ❌ | `/app/downloads` | Cartella download |
-| `LOG_TO_FILE` | ❌ | `false` | Abilita log su file |
-| `LOG_FILE_PATH` | ❌ | `bot.log` | Path del file di log |
+| `BOT_TOKEN` | ✅ | — | Token from [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_API_ID` | ✅ | — | From [my.telegram.org/apps](https://my.telegram.org/apps) |
+| `TELEGRAM_API_HASH` | ✅ | — | From [my.telegram.org/apps](https://my.telegram.org/apps) |
+| `ALLOWED_IDS` | ✅ | — | Comma-separated user IDs allowed to use the bot |
+| `BASE_URL` | ❌ | — | Local Bot API URL (`http://yatytb-tg-api:8081/bot{token}`) |
+| `MAX_FILE_SIZE_MB` | ❌ | 2000 | Max download size (Telegram upload limit is 50 MB without local API) |
+| `COOKIES_PATH` | ❌ | `/app/cookies/cookies.txt` | Path to cookies.txt |
+| `DOWNLOAD_DIR` | ❌ | `/app/downloads` | Download directory |
+| `LOG_TO_FILE` | ❌ | `false` | Enable file logging |
+| `LOG_FILE_PATH` | ❌ | `bot.log` | Log file path |
 
-### Trovare gli ID utente
+### Finding your IDs
 
-- Il tuo ID: chiedi a [@getmyid_bot](https://t.me/getmyid_bot)
-- Chat ID (per gruppi): usa `/start` in un gruppo e controlla i log del bot
+- Your user ID: ask [@getmyid_bot](https://t.me/getmyid_bot)
+- Chat ID (for groups): use `/start` in a group and check the bot logs
 
 ## Passing Cookies 🍪
 
