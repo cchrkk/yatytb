@@ -43,6 +43,10 @@ for logger_name in ("telegram", "httpx", "asyncio"):
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 
+# Semaforo: un download alla volta
+download_lock = asyncio.Lock()
+
+
 # --- Utility ---
 def validate_env():
     errors = []
@@ -88,7 +92,7 @@ async def get_yt_metadata(url):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
     return json.loads(stdout.decode())
 
 
@@ -247,7 +251,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
             return
 
-        files = await download_content(url, is_audio)
+        async with download_lock:
+            files = await download_content(url, is_audio)
         if not files:
             await update.message.reply_text(
                 "❌ Nessun file scaricato. Verifica che il link sia valido o che il formato sia supportato."
@@ -322,11 +327,11 @@ async def main():
         exit(1)
 
     logging.info(
-        """
+        r"""
                      __            __ ___.
       ___.__._____ _/  |_ ___.__._/  |\_ |__
-     <   |  |\__  \\\\   __<   |  |\   __\ __ \\
-      \___  | / __ \|  |  \___  | |  | | \_\ \\
+     <   |  |\__  \\   __<   |  |\   __\ __ \
+      \___  | / __ \|  |  \___  | |  | | \_\ \
       / ____|(____  /__|  / ____| |__| |___  /
       \/          \/      \/               \/
     """
