@@ -5,7 +5,6 @@ import logging
 import shutil
 import subprocess
 import json
-import signal
 from datetime import datetime
 
 from telegram import Update, InputMediaPhoto, InputMediaVideo
@@ -48,9 +47,6 @@ for logger_name in ("telegram", "httpx", "asyncio"):
 
 # Coda download
 download_queue = asyncio.Queue()
-stop_flag = asyncio.Event()
-
-
 # --- Utility ---
 def validate_env():
     errors = []
@@ -352,21 +348,14 @@ async def main():
     app.add_handler(MessageHandler(filters.ALL, handle_message))
 
     print("🤖 Bot avviato — premi Ctrl+C per fermarlo")
-    await app.run_polling(stop_signals=None)
+    await app.run_polling()
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, stop_flag.set)
-
     try:
-        loop.run_until_complete(main())
+        asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("Bot fermato dall'utente")
     except Exception as e:
         logging.error("Errore main: %s", e)
-    finally:
-        loop.close()
-        logging.info("Bot terminato")
+    logging.info("Bot terminato")
