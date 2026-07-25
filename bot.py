@@ -3,9 +3,7 @@ import re
 import asyncio
 import logging
 import shutil
-import subprocess
 import json
-from datetime import datetime
 
 from telegram import Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import (
@@ -16,7 +14,6 @@ from telegram.ext import (
     filters,
 )
 from telegram.constants import ParseMode
-from telegram.error import TelegramError
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(
@@ -45,8 +42,7 @@ logging.basicConfig(
 for logger_name in ("telegram", "httpx", "asyncio"):
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
-# Coda download
-download_queue = asyncio.Queue()
+
 # --- Utility ---
 def validate_env():
     errors = []
@@ -86,47 +82,45 @@ def escape_md(text):
     return text
 
 
-def build_caption(url, extractor="link"):
-    desc, dur, uploader, uploader_url, ext, likes = "N/D", "?", "sconosciuto", "", "?", "N/D"
-    try:
-        result = subprocess.run(
-            ["yt-dlp", "-J", "--cookies", COOKIES_PATH, url],
-            capture_output=True, text=True, timeout=30,
-        )
-        if result.returncode == 0:
-            d = json.loads(result.stdout)
-            full = d.get("description", "") or ""
-            desc = (full[:200] + "...") if len(full) > 200 else full
-            desc = escape_md(desc)
-            dur = format_duration(d.get("duration", 0))
-            uploader = d.get("uploader", "sconosciuto") or "sconosciuto"
-            uploader_url = d.get("uploader_url", "") or ""
-            ext = d.get("extractor", "?") or "?"
-            likes = format_count(d.get("like_count", 0))
-    except Exception:
-        pass
+async def get_yt_metadata(url):
+    proc = await asyncio.create_subprocess_exec(
+        "yt-dlp", "-J", "--cookies", COOKIES_PATH, url,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+    return json.loads(stdout.decode())
 
-    up = f"[{escape_md(uploader)}]({uploader_url})" if uploader_url else escape_md(uploader)
+
+async def build_caption(url):
+    try:
+        d = await get_yt_metadata(url)
+        full = d.get("description", "") or ""
+        desc = (full[:200] + "...") if len(full) > 200 else full
+        desc = escape_md(desc)
+        dur = format_duration(d.get("duration", 0))
+        uploader = escape_md(d.get("uploader", "sconosciuto") or "sconosciuto")
+        uploader_url = d.get("uploader_url", "") or ""
+        ext = escape_md(d.get("extractor", "?") or "?")
+        likes = format_count(d.get("like_count", 0))
+        filesize = d.get("filesize") or d.get("filesize_approx")
+    except Exception:
+        desc = "N/D"
+        dur = "?"
+        uploader = "sconosciuto"
+        uploader_url = ""
+        ext = "?"
+        likes = "N/D"
+        filesize = None
+
+    up = f"[{uploader}]({uploader_url})" if uploader_url else uploader
     return (
-        f"🔗 [{escape_md(ext)}]({url})\n"
+        f"🔗 [{ext}]({url})\n"
         f"👤 {up}\n"
         f"🕒 *{dur}* | 👍 *{likes}*\n"
-        f"📝 {desc}"
+        f"📝 {desc}",
+        filesize,
     )
-
-
-async def get_filesize(url):
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "yt-dlp", "-J", "--cookies", COOKIES_PATH, url,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
-        d = json.loads(stdout.decode())
-        return d.get("filesize") or d.get("filesize_approx")
-    except Exception:
-        return None
 
 
 async def cleanup():
@@ -147,12 +141,7 @@ async def cleanup():
 async def download_content(url, is_audio):
     try:
         if "instagram.com/p/" in url:
-            cmd = [
-                "gallery-dl",
-                "--cookies", COOKIES_PATH,
-                "-d", DOWNLOAD_DIR,
-                url,
-            ]
+            cmd = ["gallery-dl", "--cookies", COOKIES_PATH, "-d", DOWNLOAD_DIR, url]
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -165,11 +154,9 @@ async def download_content(url, is_audio):
         else:
             tmpl = os.path.join(DOWNLOAD_DIR, "%(title).80s.%(ext)s")
             cmd = [
-                "yt-dlp",
-                "--cookies", COOKIES_PATH,
+                "yt-dlp", "--cookies", COOKIES_PATH,
                 "--merge-output-format", "mp4",
-                "-o", tmpl,
-                url,
+                "-o", tmpl, url,
             ]
             if is_audio:
                 cmd += ["-x", "--audio-format", "mp3"]
@@ -226,8 +213,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Annulla il download in coda per l'utente."""
-    await update.message.reply_text("⏹ Nessun download da annullare (usa quando sei in coda).")
+    await update.message.reply_text("⏹ Nessun download in corso da annullare.")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -252,8 +238,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "👍")
 
-        # Controllo dimensione
-        filesize = await get_filesize(url)
+        # Una sola chiamata yt-dlp per metadata + filesize
+        caption, filesize = await build_caption(url)
         if filesize and filesize > MAX_FILE_SIZE:
             await update.message.reply_text(
                 f"⚠️ File troppo grande (> {MAX_FILE_SIZE // 1024 // 1024} MB)."
@@ -263,55 +249,61 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         files = await download_content(url, is_audio)
         if not files:
-            await update.message.reply_text("❌ Nessun file scaricato.")
+            await update.message.reply_text(
+                "❌ Nessun file scaricato. Verifica che il link sia valido o che il formato sia supportato."
+            )
             await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
             return
 
-        # Prepara caption video solo per il primo file
-        caption = build_caption(url, "link")
         media_group = []
+        opened_files = []
 
-        for fp in files:
-            ext = os.path.splitext(fp)[1].lower()
+        try:
+            for fp in files:
+                ext = os.path.splitext(fp)[1].lower()
 
-            if is_audio and ext == ".mp3":
-                with open(fp, "rb") as f:
-                    await update.message.reply_audio(
-                        f, caption=f"🔗 [Link]({url})", parse_mode=ParseMode.MARKDOWN
+                if is_audio and ext == ".mp3":
+                    with open(fp, "rb") as f:
+                        await update.message.reply_audio(
+                            f, caption=f"🔗 [Link]({url})", parse_mode=ParseMode.MARKDOWN
+                        )
+                    os.remove(fp)
+                    continue
+
+                fh = open(fp, "rb")
+                opened_files.append(fh)
+
+                if ext in (".jpg", ".jpeg", ".png"):
+                    media_group.append(
+                        InputMediaPhoto(
+                            fh,
+                            caption=caption if not media_group else None,
+                            parse_mode=ParseMode.MARKDOWN,
+                        )
                     )
-                os.remove(fp)
-                continue
-
-            if ext in (".jpg", ".jpeg", ".png"):
-                media_group.append(
-                    InputMediaPhoto(
-                        open(fp, "rb"),
-                        caption=caption if not media_group else None,
-                        parse_mode=ParseMode.MARKDOWN,
+                elif ext in (".mp4", ".webm"):
+                    media_group.append(
+                        InputMediaVideo(
+                            fh,
+                            caption=caption if not media_group else None,
+                            parse_mode=ParseMode.MARKDOWN,
+                        )
                     )
-                )
-            elif ext in (".mp4", ".webm"):
-                media_group.append(
-                    InputMediaVideo(
-                        open(fp, "rb"),
-                        caption=caption if not media_group else None,
-                        parse_mode=ParseMode.MARKDOWN,
-                    )
-                )
-            else:
-                with open(fp, "rb") as f:
-                    await update.message.reply_document(f)
-                os.remove(fp)
+                else:
+                    fh.close()
+                    opened_files.remove(fh)
+                    with open(fp, "rb") as f:
+                        await update.message.reply_document(f)
+                    os.remove(fp)
 
-        if media_group:
-            for chunk in [media_group[i : i + 10] for i in range(0, len(media_group), 10)]:
-                try:
+            if media_group:
+                for chunk in [media_group[i : i + 10] for i in range(0, len(media_group), 10)]:
                     await update.message.reply_media_group(media=chunk)
-                except Exception as e:
-                    logging.error("Errore media_group: %s", e)
 
-        # Cleanup
-        await asyncio.sleep(2)
+        finally:
+            for fh in opened_files:
+                fh.close()
+
         await cleanup()
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
