@@ -23,8 +23,9 @@ COOKIES_PATH = os.getenv("COOKIES_PATH", "/app/cookies/cookies.txt")
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
-TELEGRAM_UPLOAD_LIMIT = 50 * 1024 * 1024  # 50 MB — limite upload Telegram bot API
-MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "2000")) * 1024 * 1024  # limite download yt-dlp
+BASE_URL = os.getenv("BASE_URL")  # es. http://tg-api:8081 (local Bot API, senza limite 50 MB)
+TELEGRAM_UPLOAD_LIMIT = 2000 * 1024 * 1024 if BASE_URL else 50 * 1024 * 1024
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "2000")) * 1024 * 1024
 
 # Logging
 handlers = [logging.StreamHandler()]
@@ -354,15 +355,19 @@ async def main():
 
     await cleanup()
 
-    app = (
+    builder = (
         ApplicationBuilder()
         .token(TOKEN)
         .read_timeout(600)
         .write_timeout(600)
         .connect_timeout(60)
         .pool_timeout(60)
-        .build()
     )
+    if BASE_URL:
+        builder.base_url(BASE_URL)
+        logging.info("Usando Bot API locale: %s", BASE_URL)
+
+    app = builder.build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_handler))
