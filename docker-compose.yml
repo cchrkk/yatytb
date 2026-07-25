@@ -1,23 +1,23 @@
 services:
-  tg-api:
-    container_name: tg-api
+  yatytb-tg-api:
+    container_name: yatytb-tg-api
     image: aiogram/telegram-bot-api:latest
     environment:
       - TELEGRAM_API_ID=${TELEGRAM_API_ID}
       - TELEGRAM_API_HASH=${TELEGRAM_API_HASH}
     volumes:
-      - tg-api-data:/data
+      - yatytb-tg-api-data:/data
     restart: always
 
   yatytb:
     container_name: yatytb
     image: ghcr.io/cchrkk/yatytb:latest
     depends_on:
-      - tg-api
+      - yatytb-tg-api
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_IDS=${ALLOWED_IDS}
-      - BASE_URL=http://tg-api:8081/bot{token}
+      - BASE_URL=http://yatytb-tg-api:8081/bot{token}
       - MAX_FILE_SIZE_MB=2000
       - LOG_TO_FILE=false
       - LOG_FILE_PATH=bot.log
@@ -30,4 +30,4 @@ services:
     stop_signal: SIGTERM
 
 volumes:
-  tg-api-data:
+  yatytb-tg-api-data:

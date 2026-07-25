@@ -4,89 +4,112 @@ This project is a Telegram bot that allows you to download videos and audio usin
 
 ## Features 🌟
 
-- Downloads videos and audio using the fabulous [yt-dlp](https://github.com/yt-dlp/yt-dlp). 🎧🎬
-- Handles Instagram posts using [gallery-dl](https://github.com/mikf/gallery-dl). 📸📲
-- Supports sending video and image files on Telegram. 💬📹
-- Allows customization of allowed user IDs via Docker environment variables. 🔒
+- Downloads videos and audio using [yt-dlp](https://github.com/yt-dlp/yt-dlp) with EJS challenge solving 🎧🎬
+- Handles Instagram posts using [gallery-dl](https://github.com/mikf/gallery-dl) 📸📲
+- Supports sending video and image files on Telegram 💬📹
+- **Local Bot API** (`yatytb-tg-api`) — bypassa il limite di 50 MB di Telegram 🚀
+- Comandi `/start`, `/help`
+- Download in coda (un file alla volta)
+- Cookie auth per siti bloccati 🍪
+- Docker Compose pronto all'uso 🐳
 
 ## Prerequisites ⚙️
 
 - Docker 🐳
 - Docker Compose 🛠️
 - Telegram (duh 🫠)
+- API ID e API Hash da [my.telegram.org/apps](https://my.telegram.org/apps)
 
-## Ghcr.io Compose Example 🚀
+## Docker Compose 🚀
 
 ```yaml
-version: "3.8"
 services:
+  yatytb-tg-api:
+    container_name: yatytb-tg-api
+    image: aiogram/telegram-bot-api:latest
+    environment:
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH}
+    volumes:
+      - yatytb-tg-api-data:/data
+    restart: always
+
   yatytb:
     container_name: yatytb
     image: ghcr.io/cchrkk/yatytb:latest
+    depends_on:
+      - yatytb-tg-api
     environment:
-      - BOT_TOKEN=${BOT_TOKEN} # REQUIRED: Bot token from BotFather
-      - ALLOWED_IDS=${ALLOWED_IDS} # REQUIRED: Set allowed IDs separated by comma
-      # Optional:- LOG_TO_FILE=false
-      # Optional:- LOG_FILE_PATH=bot.log
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ALLOWED_IDS=${ALLOWED_IDS}
+      - BASE_URL=http://yatytb-tg-api:8081/bot{token}
+      - MAX_FILE_SIZE_MB=2000
+      - LOG_TO_FILE=false
+      - COOKIES_PATH=/app/cookies/cookies.txt
+      - DOWNLOAD_DIR=/app/downloads
     volumes:
-      - ./cookies.txt:/app/cookies/cookies.txt  # Optional: Only set if cookies needed
+      - ./cookies.txt:/app/cookies/cookies.txt
+    restart: always
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
+
+volumes:
+  yatytb-tg-api-data:
 ```
 
 ## Environment Variables 🔑
-- **BOT_TOKEN**: Your Telegram bot token (required for authentication). 🆔
-  Ask it here [@BotFather](https://t.me/BotFather)
-- **ALLOWED_IDS**: A comma-separated list of user IDs authorized to interact with the bot. 🔗Ask yours here [@getmyid_bot](https://t.me/getmyid_bot)
-- **LOG_TO_FILE**: Enable this to log the console output to a file if your choice.
-- **LOG_FILE_PATH**: Full directory to the .log file 
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `BOT_TOKEN` | ✅ | — | Token da [@BotFather](https://t.me/BotFather) |
+| `TELEGRAM_API_ID` | ✅ | — | Da [my.telegram.org/apps](https://my.telegram.org/apps) |
+| `TELEGRAM_API_HASH` | ✅ | — | Da [my.telegram.org/apps](https://my.telegram.org/apps) |
+| `ALLOWED_IDS` | ✅ | — | ID utenti autorizzati (separati da virgola) |
+| `BASE_URL` | ❌ | — | URL del Bot API locale (`http://yatytb-tg-api:8081/bot{token}`) |
+| `MAX_FILE_SIZE_MB` | ❌ | 2000 | Dimensione massima download (upload Telegram 50 MB senza local API) |
+| `COOKIES_PATH` | ❌ | `/app/cookies/cookies.txt` | Path del file cookies |
+| `DOWNLOAD_DIR` | ❌ | `/app/downloads` | Cartella download |
+| `LOG_TO_FILE` | ❌ | `false` | Abilita log su file |
+| `LOG_FILE_PATH` | ❌ | `bot.log` | Path del file di log |
+
+### Trovare gli ID utente
+
+- Il tuo ID: chiedi a [@getmyid_bot](https://t.me/getmyid_bot)
+- Chat ID (per gruppi): usa `/start` in un gruppo e controlla i log del bot
 
 ## Passing Cookies 🍪
+
 ### Why Pass Cookies?
 Passing cookies to `yt-dlp` or `gallery-dl` is useful for:
 1. Bypassing login requirements when an extractor doesn't support explicit login functionality.
 2. Handling CAPTCHA challenges on certain websites (e.g., YouTube, CloudFlare).
 
-### Exporting Cookies from browser with yt-dlp (you will need to install it in your pc)
-To save cookies as a `.txt` file:
-```bash
-yt-dlp --cookies-from-browser chrome --cookies cookies.txt
-```
-This method extracts *all cookies* from your browser—so make sure to keep the file secure. Use firefox/vivaldi/chrome/etc. in the command.
-
-### Exporting Cookies from browser with browser extension (easy way)
+### Export from browser (easy way)
 Use these extensions to download the cookies.txt file:
 - **[Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?pli=1)** for Chromium-based browsers
-- **[cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt)** for Firefox  
+- **[cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt)** for Firefox
 
 ## How It Works ⚡
-1. Send a video or post link (YouTube, Instagram) to the bot. 📨
-2. The bot downloads the content and sends you the files. ⬇️
-3. If the link is an Instagram post with multiple images, the bot will send all images in a single message as a media group. 📸🎨
-   
-# Demo Pics 🤳
 
-### Instagram Reel - handled by yt-dlp
+1. Send a video or post link (YouTube, Instagram) to the bot 📨
+2. The bot downloads the content and sends you the files ⬇️
+3. If the link is an Instagram post with multiple images, the bot will send all images in a single message as a media group 📸🎨
 
+## Demo Pics 🤳
+
+### Instagram Reel
 ![image](https://github.com/user-attachments/assets/2573f840-121f-4981-bf5e-0611a21b9c95)
 
-
-### Instagram Photos Post - handled by gallery-dl
-
+### Instagram Photos Post
 ![image](https://github.com/user-attachments/assets/e756bb59-fc2e-4cfb-bcff-b20dc1400c80)
 
-
-### Tiktok Video - handled by yt-dlp
-
+### Tiktok Video
 ![image](https://github.com/user-attachments/assets/8ed6f77a-1cd9-4f30-bd31-881b55f2a2ab)
 
-## Todo List ✔️
-- Use aiogram with local api to handle bigger files easily
-- Fix Instagram photos post caption
-- Fix Telegram photos post
-- More variables to control max file size, max files to download per photos post, custom caption
-- Cleanup code
-  
 ## Contributing 💡
+
 If you want to contribute to this project, feel free to fork the repository and send a pull request with improvements or bug fixes. 🛠️
 
 ## License 📜
+
 This project is licensed under the MIT License - see the LICENSE file for details.
