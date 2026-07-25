@@ -17,7 +17,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_IDS=${ALLOWED_IDS}
-      - BASE_URL=http://tg-api:8081
+      - BASE_URL=http://tg-api:8081/bot{token}
       - MAX_FILE_SIZE_MB=2000
       - LOG_TO_FILE=false
       - LOG_FILE_PATH=bot.log
