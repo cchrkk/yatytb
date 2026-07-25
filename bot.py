@@ -314,7 +314,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # --- Main ---
-def main():
+async def main():
     errors = validate_env()
     if errors:
         for e in errors:
@@ -332,7 +332,7 @@ def main():
     """
     )
 
-    asyncio.run(cleanup())
+    await cleanup()
 
     app = (
         ApplicationBuilder()
@@ -347,13 +347,25 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(MessageHandler(filters.ALL, handle_message))
 
-    print("🤖 Bot avviato — premi Ctrl+C per fermarlo")
-    app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    logging.info("Bot avviato")
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 
 if __name__ == "__main__":
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("Bot fermato dall'utente")
     except Exception as e:
