@@ -14,6 +14,7 @@ from telegram.ext import (
     filters,
 )
 from telegram.constants import ParseMode
+from telegram.error import TimedOut
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ALLOWED_IDS = set(
@@ -23,7 +24,7 @@ COOKIES_PATH = os.getenv("COOKIES_PATH", "/app/cookies/cookies.txt")
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/app/downloads")
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() == "true"
 LOG_FILE_PATH = os.getenv("LOG_FILE_PATH", "bot.log")
-MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "2000")) * 1024 * 1024
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "50")) * 1024 * 1024  # Telegram bot API: 50 MB via upload
 
 # Logging
 handlers = [logging.StreamHandler()]
@@ -312,6 +313,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await cleanup()
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
+    except TimedOut:
+        logging.error("TimedOut su %s — file troppo grosso per Telegram (limite 50 MB via upload)", url)
+        await update.message.reply_text("⚠️ File > 50 MB. Telegram non accetta upload superiori a 50 MB.")
+        await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
+        await cleanup()
     except Exception as e:
         logging.error("Errore handle_message [%s]: %s", type(e).__name__, e)
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
