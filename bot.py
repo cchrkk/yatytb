@@ -80,6 +80,12 @@ def format_count(n):
         return "N/D"
 
 
+def escape_md(text):
+    for ch in ("_", "*", "[", "`"):
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
 def build_caption(url, extractor="link"):
     desc, dur, uploader, uploader_url, ext, likes = "N/D", "?", "sconosciuto", "", "?", "N/D"
     try:
@@ -89,19 +95,20 @@ def build_caption(url, extractor="link"):
         )
         if result.returncode == 0:
             d = json.loads(result.stdout)
-            full = d.get("description", "")
+            full = d.get("description", "") or ""
             desc = (full[:200] + "...") if len(full) > 200 else full
+            desc = escape_md(desc)
             dur = format_duration(d.get("duration", 0))
-            uploader = d.get("uploader", "sconosciuto")
-            uploader_url = d.get("uploader_url", "")
-            ext = d.get("extractor", "?")
+            uploader = d.get("uploader", "sconosciuto") or "sconosciuto"
+            uploader_url = d.get("uploader_url", "") or ""
+            ext = d.get("extractor", "?") or "?"
             likes = format_count(d.get("like_count", 0))
     except Exception:
         pass
 
-    up = f"[{uploader}]({uploader_url})" if uploader_url else uploader
+    up = f"[{escape_md(uploader)}]({uploader_url})" if uploader_url else escape_md(uploader)
     return (
-        f"🔗 [{ext}]({url})\n"
+        f"🔗 [{escape_md(ext)}]({url})\n"
         f"👤 {up}\n"
         f"🕒 *{dur}* | 👍 *{likes}*\n"
         f"📝 {desc}"
