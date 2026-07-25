@@ -5,7 +5,7 @@ services:
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - ALLOWED_IDS=${ALLOWED_IDS}
-      - MAX_FILE_SIZE_MB=2000
+      - MAX_FILE_SIZE_MB=2000  # Limite download (upload Telegram max 50 MB)
       - LOG_TO_FILE=false
       - LOG_FILE_PATH=bot.log
       - COOKIES_PATH=/app/cookies/cookies.txt
