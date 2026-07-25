@@ -92,7 +92,7 @@ async def get_yt_metadata(url):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=60)
+    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
     return json.loads(stdout.decode())
 
 
@@ -313,7 +313,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "👌")
 
     except Exception as e:
-        logging.error("Errore handle_message: %s", e)
+        logging.error("Errore handle_message [%s]: %s", type(e).__name__, e)
         await context.bot.set_message_reaction(chat_id, update.message.message_id, "💔")
         await cleanup()
 
@@ -342,8 +342,10 @@ async def main():
     app = (
         ApplicationBuilder()
         .token(TOKEN)
-        .read_timeout(300)
-        .write_timeout(300)
+        .read_timeout(600)
+        .write_timeout(600)
+        .connect_timeout(60)
+        .pool_timeout(60)
         .build()
     )
 
