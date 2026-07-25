@@ -180,10 +180,11 @@ async def download_content(url, is_audio):
                 stderr=asyncio.subprocess.PIPE,
             )
             stdout, stderr = await proc.communicate()
-            out = stdout.decode() + stderr.decode()
+            err_text = stderr.decode()
+            out = stdout.decode() + err_text
             logging.info("yt-dlp output: %s", out.strip()[:500])
-            if "ERROR:" in stderr.decode():
-                raise Exception(stderr.decode().strip())
+            if proc.returncode != 0:
+                raise Exception(err_text.strip() or "yt-dlp fallito")
 
         files = []
         for root, _, fs in os.walk(DOWNLOAD_DIR):
